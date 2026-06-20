@@ -46,7 +46,7 @@ app.use(trackVisit);
 // Статика
 app.use((req, res, next) => {
   const ext = path.extname(req.path);
-  if (!ext || ext === '.html') {
+ if ((!ext || ext === '.html') && !req.path.endsWith('.js') && !req.path.endsWith('.css') && !req.path.startsWith('/api') && !req.path.startsWith('/admin') && !req.path.startsWith('/uploads')) {
     try {
       const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
       return res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
