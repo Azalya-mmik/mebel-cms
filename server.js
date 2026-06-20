@@ -61,7 +61,8 @@ app.post('/contact', (req, res) => {
 
 // Страница предпросмотра (live preview с флагом preview=1)
 app.get('/preview', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+ const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
 });
 
 // ─── ГЛАВНАЯ СТРАНИЦА АДМИНКИ ─────────────────────────────────────────────────
