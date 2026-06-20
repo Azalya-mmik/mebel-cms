@@ -115,7 +115,8 @@ app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Не найдено' });
   }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
 });
 
 // ─── СТАРТ ────────────────────────────────────────────────────────────────────
