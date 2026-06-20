@@ -45,11 +45,15 @@ app.use(trackVisit);
 
 // Статика
 app.use((req, res, next) => {
-  if (req.path === '/' || req.path === '/index.html') {
-    const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
-    return res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
+  const ext = path.extname(req.path);
+  if (!ext || ext === '.html') {
+    try {
+      const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+      return res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
+    } catch(e) { next(); }
+  } else {
+    next();
   }
-  next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
