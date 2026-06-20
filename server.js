@@ -46,6 +46,7 @@ app.use(trackVisit);
 // Статика
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.get('/order.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'order.js')));
 
 // ─── РОУТЫ ────────────────────────────────────────────────────────────────────
 app.use('/admin', authRouter);
