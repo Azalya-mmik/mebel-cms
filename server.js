@@ -44,6 +44,13 @@ app.use(session({
 app.use(trackVisit);
 
 // Статика
+app.use((req, res, next) => {
+  if (req.path === '/' || req.path === '/index.html') {
+    const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+    return res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.get('/order.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'order.js')));
