@@ -43,7 +43,7 @@ app.use(session({
 // Трекинг посещений
 app.use(trackVisit);
 
-// Статика
+app.get('/order.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'order.js')));
 app.use((req, res, next) => {
   const ext = path.extname(req.path);
  if ((!ext || ext === '.html') && !req.path.endsWith('.js') && !req.path.endsWith('.css') && !req.path.startsWith('/api') && !req.path.startsWith('/admin') && !req.path.startsWith('/uploads')) {
@@ -57,7 +57,6 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
-app.get('/order.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'order.js')));
 
 // ─── РОУТЫ ────────────────────────────────────────────────────────────────────
 app.use('/admin', authRouter);
