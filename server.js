@@ -12,7 +12,7 @@ const trackVisit = require('./middleware/tracker');
 const { requireAuth } = require('./middleware/auth');
 
 // Инициализация БД
-initDb();
+// Инициализация БД и старт сервера — в конце файла (после восстановления из S3)
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -124,6 +124,7 @@ app.use((req, res) => {
 });
 
 // ─── СТАРТ ────────────────────────────────────────────────────────────────────
+initDb();
 app.listen(PORT, () => {
   console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);
   console.log(`🔐 Админка: http://localhost:${PORT}/admin`);
@@ -254,8 +255,9 @@ function adminCSS() {
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+    html, body { max-width: 100%; overflow-x: hidden; }
     
-    .layout { display: flex; min-height: 100vh; }
+    .layout { display: flex; min-height: 100vh; max-width: 100%; }
     
     /* Sidebar */
     .sidebar { width: 240px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; transition: transform .3s; z-index: 100; }
@@ -279,7 +281,7 @@ function adminCSS() {
     .overlay { display: none; position: fixed; inset: 0; background: #0009; z-index: 99; }
     
     /* Main */
-    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; max-width: 100%; overflow-x: hidden; }
     .page-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 0; }
     .page-header h1 { font-size: 22px; font-weight: 800; }
     .page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -426,15 +428,19 @@ function adminCSS() {
     
     /* Responsive */
     @media (max-width: 768px) {
-      .sidebar { position: fixed; left: -240px; height: 100%; }
+      .layout { flex-direction: column; }
+      .sidebar { position: fixed; left: -280px; top: 0; width: 260px; height: 100%; }
       .sidebar.open { left: 0; }
       .overlay.open { display: block; }
       .mobile-header { display: flex; }
       .content { padding: 16px; }
       .page-header { padding: 16px 16px 0; }
+      .page-header h1 { font-size: 18px; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .form-row { grid-template-columns: 1fr; }
       .products-grid { grid-template-columns: 1fr 1fr; }
+      .dash-grid, .dash-grid2, .settings-grid { grid-template-columns: 1fr !important; }
+      .filter-bar input, .filter-bar select { min-width: 0; }
     }
     @media (max-width: 480px) {
       .stats-grid { grid-template-columns: 1fr 1fr; }
