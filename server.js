@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const fileUpload = require('express-fileupload');
 const path = require('path');
 const fs = require('fs');
@@ -18,6 +17,16 @@ initDb();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Каталог для данных, которые должны переживать редеплой (БД, сессии, загрузки).
+// На Timeweb App Platform задай DATA_DIR=/data и примонтируй туда сетевой диск.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+for (const d of [path.join(DATA_DIR, 'db'), path.join(DATA_DIR, 'public', 'uploads')]) {
+  try { fs.mkdirSync(d, { recursive: true }); } catch (e) {}
+}
+
+// За обратным прокси Timeweb (HTTPS) — чтобы куки и IP определялись верно
+app.set('trust proxy', 1);
+
 // ─── MIDDLEWARE ────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -30,12 +39,14 @@ app.use(fileUpload({
 
 // Сессии
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.db', dir: './db' }),
+  // Хранилище сессий — в памяти (после редеплоя нужно заново войти в /admin).
+  // Так нет нативной зависимости sqlite3 → сборка на App Platform не падает.
   secret: process.env.SESSION_SECRET || 'fallback_secret_change_me',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // true если HTTPS
+    secure: process.env.NODE_ENV === 'production', // HTTPS на проде
+    sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 дней
   }
 }));
@@ -43,36 +54,20 @@ app.use(session({
 // Трекинг посещений
 app.use(trackVisit);
 
-app.get('/order.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'order.js')));
-app.use((req, res, next) => {
-  const ext = path.extname(req.path);
- if ((!ext || ext === '.html') && !req.path.endsWith('.js') && !req.path.endsWith('.css') && !req.path.startsWith('/api') && !req.path.startsWith('/admin') && !req.path.startsWith('/uploads')) {
-    try {
-      const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
-      return res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
-    } catch(e) { next(); }
-  } else {
-    next();
-  }
-});
+// Статика
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/uploads', express.static(path.join(DATA_DIR, 'public', 'uploads')));
 
 // ─── РОУТЫ ────────────────────────────────────────────────────────────────────
 app.use('/admin', authRouter);
-app.use('/api', apiRouter);
+app.use('/api', require('./routes/public')); // публичный API сайта (без авторизации)
+app.use('/api', apiRouter);                  // админ API (требует логина)
 
-// Публичный API: принять заявку
-app.post('/contact', (req, res) => {
-  // Перенаправить на API
-  req.url = '/leads';
-  apiRouter.handle(req, res);
-});
+// Публичный приём заявок теперь через POST /api/public/lead (см. routes/public.js)
 
 // Страница предпросмотра (live preview с флагом preview=1)
 app.get('/preview', requireAuth, (req, res) => {
- const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
-res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ─── ГЛАВНАЯ СТРАНИЦА АДМИНКИ ─────────────────────────────────────────────────
@@ -125,8 +120,7 @@ app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Не найдено' });
   }
-  const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
-res.send(html.replace('</body>', '<script src="/order.js"></script></body>'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ─── СТАРТ ────────────────────────────────────────────────────────────────────

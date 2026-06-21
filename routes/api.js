@@ -2,241 +2,396 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
-const { run, get, all } = require('../db/init');
+const { getDb } = require('../db/init');
 const { requireAuth, logAction } = require('../middleware/auth');
 const nodemailer = require('nodemailer');
 
+// Middleware: все API роуты требуют авторизации
 router.use(requireAuth);
 
-router.get('/dashboard', async (req, res) => {
-  try {
-    const weekAgo = new Date(Date.now()-7*86400000).toISOString().split('T')[0];
-    const monthAgo = new Date(Date.now()-30*86400000).toISOString().split('T')[0];
-    const [vToday,vWeek,vMonth,newLeads,totalLeads] = await Promise.all([
-      get("SELECT COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)=date('now')"),
-      get("SELECT COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)>=?",[weekAgo]),
-      get("SELECT COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)>=?",[monthAgo]),
-      get("SELECT COUNT(*) c FROM leads WHERE status='new'"),
-      get("SELECT COUNT(*) c FROM leads"),
-    ]);
-    const [topPages,recentLeads,chartData,deviceStats] = await Promise.all([
-      all("SELECT page,COUNT(*) cnt FROM visits WHERE date(created_at)>=? GROUP BY page ORDER BY cnt DESC LIMIT 5",[weekAgo]),
-      all("SELECT * FROM leads ORDER BY created_at DESC LIMIT 5"),
-      all("SELECT date(created_at) d,COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)>=? GROUP BY d ORDER BY d",[weekAgo]),
-      all("SELECT device,COUNT(*) c FROM visits WHERE date(created_at)>=? GROUP BY device",[weekAgo]),
-    ]);
-    res.json({stats:{visitsToday:vToday.c,visitsWeek:vWeek.c,visitsMonth:vMonth.c,newLeads:newLeads.c,totalLeads:totalLeads.c},topPages,recentLeads,chartData,deviceStats});
-  } catch(e){res.status(500).json({error:e.message});}
-});
+// ─── ДАШБОРД ─────────────────────────────────────────────────────────────────
+router.get('/dashboard', (req, res) => {
+  const db = getDb();
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const weekAgo = new Date(now - 7 * 86400000).toISOString().split('T')[0];
+  const monthAgo = new Date(now - 30 * 86400000).toISOString().split('T')[0];
 
-router.get('/products', async (req,res) => {
-  try{res.json(await all('SELECT * FROM products ORDER BY sort_order,id DESC'));}
-  catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/products', async (req,res) => {
-  const {name,description,price,category,status}=req.body;
-  if(!name) return res.status(400).json({error:'Название обязательно'});
-  try{
-    const r=await run('INSERT INTO products(name,description,price,category,status) VALUES(?,?,?,?,?)',[name,description||'',parseInt(price)||0,category||'other',status||'available']);
-    logAction('product_create',`Создан: ${name}`,req);
-    res.json({id:r.lastID});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-router.put('/products/:id', async (req,res) => {
-  const {name,description,price,category,status,sort_order}=req.body;
-  try{
-    await run('UPDATE products SET name=?,description=?,price=?,category=?,status=?,sort_order=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[name,description||'',parseInt(price)||0,category||'other',status||'available',parseInt(sort_order)||0,req.params.id]);
-    logAction('product_update',`Обновлён ID ${req.params.id}`,req);
-    res.json({ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-router.delete('/products/:id', async (req,res) => {
-  try{
-    const p=await get('SELECT * FROM products WHERE id=?',[req.params.id]);
-    if(p&&p.image){try{fs.unlinkSync(path.join(__dirname,'..','public',p.image));}catch(e){}}
-    await run('DELETE FROM products WHERE id=?',[req.params.id]);
-    logAction('product_delete',`Удалён ID ${req.params.id}`,req);
-    res.json({ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/products/:id/image',(req,res)=>{
-  if(!req.files||!req.files.image) return res.status(400).json({error:'Нет файла'});
-  const file=req.files.image;
-  const ext=path.extname(file.name).toLowerCase();
-  if(!['.jpg','.jpeg','.png','.webp'].includes(ext)) return res.status(400).json({error:'Только JPG/PNG/WEBP'});
-  const filename=`product_${req.params.id}_${Date.now()}${ext}`;
-  file.mv(path.join(__dirname,'..','public','uploads',filename),async(err)=>{
-    if(err) return res.status(500).json({error:'Ошибка загрузки'});
-    await run('UPDATE products SET image=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[`/uploads/${filename}`,req.params.id]);
-    res.json({url:`/uploads/${filename}`});
+  const visitsToday = db.prepare("SELECT COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)=date('now')").get().c;
+  const visitsWeek = db.prepare("SELECT COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)>=?").get(weekAgo).c;
+  const visitsMonth = db.prepare("SELECT COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)>=?").get(monthAgo).c;
+
+  const newLeads = db.prepare("SELECT COUNT(*) c FROM leads WHERE status='new'").get().c;
+  const totalLeads = db.prepare("SELECT COUNT(*) c FROM leads").get().c;
+
+  const topPages = db.prepare(`
+    SELECT page, COUNT(*) cnt FROM visits
+    WHERE date(created_at)>=? GROUP BY page ORDER BY cnt DESC LIMIT 5
+  `).all(weekAgo);
+
+  const recentLeads = db.prepare(`
+    SELECT * FROM leads ORDER BY created_at DESC LIMIT 5
+  `).all();
+
+  const chartData = db.prepare(`
+    SELECT date(created_at) d, COUNT(DISTINCT session_id) c
+    FROM visits WHERE date(created_at)>=?
+    GROUP BY d ORDER BY d
+  `).all(weekAgo);
+
+  const deviceStats = db.prepare(`
+    SELECT device, COUNT(*) c FROM visits
+    WHERE date(created_at)>=? GROUP BY device
+  `).all(weekAgo);
+
+  res.json({
+    stats: { visitsToday, visitsWeek, visitsMonth, newLeads, totalLeads },
+    topPages,
+    recentLeads,
+    chartData,
+    deviceStats
   });
 });
 
-router.get('/leads', async (req,res) => {
-  try{
-    const {status,from,to,limit=100,offset=0}=req.query;
-    let q='SELECT * FROM leads WHERE 1=1',p=[];
-    if(status){q+=' AND status=?';p.push(status);}
-    if(from){q+=' AND date(created_at)>=?';p.push(from);}
-    if(to){q+=' AND date(created_at)<=?';p.push(to);}
-    q+=' ORDER BY created_at DESC LIMIT ? OFFSET ?';p.push(parseInt(limit),parseInt(offset));
-    const [leads,total]=await Promise.all([all(q,p),get('SELECT COUNT(*) c FROM leads')]);
-    res.json({leads,total:total.c});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/leads', async (req,res) => {
-  const {name,phone,message,source}=req.body;
-  if(!phone) return res.status(400).json({error:'Телефон обязателен'});
-  try{
-    const r=await run('INSERT INTO leads(name,phone,message,source) VALUES(?,?,?,?)',[name||'',phone,message||'',source||'site']);
-    sendEmail({name,phone,message}).catch(()=>{});
-    res.json({id:r.lastID,ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-router.put('/leads/:id/status', async (req,res) => {
-  const {status}=req.body;
-  if(!['new','working','done','rejected'].includes(status)) return res.status(400).json({error:'Недопустимый статус'});
-  try{
-    await run('UPDATE leads SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[status,req.params.id]);
-    logAction('lead_status',`Заявка ${req.params.id} → ${status}`,req);
-    res.json({ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-router.delete('/leads/:id', async (req,res) => {
-  try{await run('DELETE FROM leads WHERE id=?',[req.params.id]);res.json({ok:true});}
-  catch(e){res.status(500).json({error:e.message});}
-});
-router.get('/leads/export', async (req,res) => {
-  try{
-    const leads=await all('SELECT * FROM leads ORDER BY created_at DESC');
-    const csv='ID,Имя,Телефон,Сообщение,Статус,Дата\n'+leads.map(l=>[l.id,`"${l.name}"`,`"${l.phone}"`,`"${(l.message||'').replace(/"/g,'""')}"`,l.status,l.created_at].join(',')).join('\n');
-    res.setHeader('Content-Type','text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition','attachment; filename="leads.csv"');
-    res.send('\uFEFF'+csv);
-  }catch(e){res.status(500).json({error:e.message});}
+// ─── ТОВАРЫ ──────────────────────────────────────────────────────────────────
+router.get('/products', (req, res) => {
+  const db = getDb();
+  const products = db.prepare('SELECT * FROM products ORDER BY sort_order, id DESC').all();
+  res.json(products);
 });
 
-router.get('/settings', async (req,res) => {
-  try{const rows=await all('SELECT * FROM settings');const s={};rows.forEach(r=>s[r.key]=r.value);res.json(s);}
-  catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/settings', async (req,res) => {
-  const allowed=['phone','address','email','vk','telegram','whatsapp','site_name','site_tagline','banner_active','banner_title','banner_text'];
-  try{
-    for(const key of allowed) if(req.body[key]!==undefined) await run('INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES(?,?,CURRENT_TIMESTAMP)',[key,req.body[key]]);
-    logAction('settings_update','Настройки обновлены',req);res.json({ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
+router.post('/products', (req, res) => {
+  const db = getDb();
+  const { name, description, price, category, status } = req.body;
+  if (!name) return res.status(400).json({ error: 'Название обязательно' });
+
+  const result = db.prepare(`
+    INSERT INTO products (name, description, price, category, status)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(name, description || '', parseInt(price) || 0, category || 'other', status || 'available');
+
+  logAction(db, 'product_create', `Создан товар: ${name}`, req);
+  res.json({ id: result.lastInsertRowid });
 });
 
-router.get('/reviews', async (req,res) => {
-  try{res.json(await all('SELECT * FROM reviews ORDER BY created_at DESC'));}catch(e){res.status(500).json({error:e.message});}
-});
-router.put('/reviews/:id/status', async (req,res) => {
-  try{await run('UPDATE reviews SET status=? WHERE id=?',[req.body.status,req.params.id]);res.json({ok:true});}
-  catch(e){res.status(500).json({error:e.message});}
-});
-router.delete('/reviews/:id', async (req,res) => {
-  try{await run('DELETE FROM reviews WHERE id=?',[req.params.id]);res.json({ok:true});}
-  catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/reviews/submit', async (req,res) => {
-  const {author,text,rating}=req.body;
-  if(!author||!text) return res.status(400).json({error:'Заполните все поля'});
-  try{await run('INSERT INTO reviews(author,text,rating) VALUES(?,?,?)',[author,text,parseInt(rating)||5]);res.json({ok:true});}
-  catch(e){res.status(500).json({error:e.message});}
+router.put('/products/:id', (req, res) => {
+  const db = getDb();
+  const { name, description, price, category, status, sort_order } = req.body;
+
+  db.prepare(`
+    UPDATE products SET name=?, description=?, price=?, category=?, status=?, sort_order=?, updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `).run(name, description || '', parseInt(price) || 0, category || 'other', status || 'available', parseInt(sort_order) || 0, req.params.id);
+
+  logAction(db, 'product_update', `Обновлён товар ID ${req.params.id}: ${name}`, req);
+  res.json({ ok: true });
 });
 
-router.get('/portfolio', async (req,res) => {
-  try{res.json(await all('SELECT * FROM portfolio ORDER BY sort_order,id DESC'));}catch(e){res.status(500).json({error:e.message});}
+router.delete('/products/:id', (req, res) => {
+  const db = getDb();
+  const product = db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id);
+  if (product && product.image) {
+    const imgPath = path.join(__dirname, '..', 'public', product.image);
+    try { fs.unlinkSync(imgPath); } catch (e) {}
+  }
+  db.prepare('DELETE FROM products WHERE id=?').run(req.params.id);
+  logAction(db, 'product_delete', `Удалён товар ID ${req.params.id}`, req);
+  res.json({ ok: true });
 });
-router.post('/portfolio',(req,res)=>{
-  if(!req.files||!req.files.image) return res.status(400).json({error:'Нет файла'});
-  const file=req.files.image;
-  const filename=`portfolio_${Date.now()}${path.extname(file.name)}`;
-  file.mv(path.join(__dirname,'..','public','uploads',filename),async(err)=>{
-    if(err) return res.status(500).json({error:'Ошибка загрузки'});
-    const r=await run('INSERT INTO portfolio(title,description,image) VALUES(?,?,?)',[req.body.title||'Работа',req.body.description||'',`/uploads/${filename}`]);
-    res.json({id:r.lastID});
+
+// Загрузка фото товара
+router.post('/products/:id/image', (req, res) => {
+  if (!req.files || !req.files.image) return res.status(400).json({ error: 'Нет файла' });
+  const db = getDb();
+  const file = req.files.image;
+  const ext = path.extname(file.name).toLowerCase();
+  if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext))
+    return res.status(400).json({ error: 'Только JPG/PNG/WEBP' });
+
+  const filename = `product_${req.params.id}_${Date.now()}${ext}`;
+  const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
+  const uploadPath = path.join(DATA_DIR, 'public', 'uploads', filename);
+
+  file.mv(uploadPath, (err) => {
+    if (err) return res.status(500).json({ error: 'Ошибка загрузки' });
+    const imgUrl = `/uploads/${filename}`;
+    db.prepare('UPDATE products SET image=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(imgUrl, req.params.id);
+    logAction(db, 'product_image', `Загружено фото для товара ID ${req.params.id}`, req);
+    res.json({ url: imgUrl });
   });
 });
-router.delete('/portfolio/:id', async (req,res) => {
-  try{
-    const item=await get('SELECT * FROM portfolio WHERE id=?',[req.params.id]);
-    if(item&&item.image){try{fs.unlinkSync(path.join(__dirname,'..','public',item.image));}catch(e){}}
-    await run('DELETE FROM portfolio WHERE id=?',[req.params.id]);res.json({ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
+
+// ─── ЗАЯВКИ ──────────────────────────────────────────────────────────────────
+router.get('/leads', (req, res) => {
+  const db = getDb();
+  const { status, from, to, limit = 100, offset = 0 } = req.query;
+  let query = 'SELECT * FROM leads WHERE 1=1';
+  const params = [];
+  if (status) { query += ' AND status=?'; params.push(status); }
+  if (from) { query += ' AND date(created_at)>=?'; params.push(from); }
+  if (to) { query += ' AND date(created_at)<=?'; params.push(to); }
+  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  params.push(parseInt(limit), parseInt(offset));
+
+  const leads = db.prepare(query).all(...params);
+  const total = db.prepare('SELECT COUNT(*) c FROM leads').get().c;
+  res.json({ leads, total });
 });
 
-router.get('/faq', async (req,res) => {
-  try{res.json(await all('SELECT * FROM faq ORDER BY sort_order,id'));}catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/faq', async (req,res) => {
-  const {question,answer}=req.body;
-  if(!question||!answer) return res.status(400).json({error:'Заполните все поля'});
-  try{const r=await run('INSERT INTO faq(question,answer) VALUES(?,?)',[question,answer]);res.json({id:r.lastID});}
-  catch(e){res.status(500).json({error:e.message});}
-});
-router.put('/faq/:id', async (req,res) => {
-  const {question,answer,active}=req.body;
-  try{await run('UPDATE faq SET question=?,answer=?,active=? WHERE id=?',[question,answer,active?1:0,req.params.id]);res.json({ok:true});}
-  catch(e){res.status(500).json({error:e.message});}
-});
-router.delete('/faq/:id', async (req,res) => {
-  try{await run('DELETE FROM faq WHERE id=?',[req.params.id]);res.json({ok:true});}
-  catch(e){res.status(500).json({error:e.message});}
+router.post('/leads', (req, res) => {
+  // Публичный эндпоинт для приёма заявок с сайта
+  const db = getDb();
+  const { name, phone, message, source } = req.body;
+  if (!phone) return res.status(400).json({ error: 'Телефон обязателен' });
+
+  const result = db.prepare(`
+    INSERT INTO leads (name, phone, message, source) VALUES (?, ?, ?, ?)
+  `).run(name || '', phone, message || '', source || 'site');
+
+  // Email-уведомление
+  sendEmailNotification({ name, phone, message }).catch(() => {});
+
+  res.json({ id: result.lastInsertRowid, ok: true });
 });
 
-router.get('/seo', async (req,res) => {
-  try{res.json(await all('SELECT * FROM seo'));}catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/seo', async (req,res) => {
-  const {page,title,description,keywords}=req.body;
-  try{
-    await run('INSERT OR REPLACE INTO seo(page,title,description,keywords,updated_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP)',[page||'/',title||'',description||'',keywords||'']);
-    logAction('seo_update',`SEO для ${page}`,req);res.json({ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
+router.put('/leads/:id/status', (req, res) => {
+  const db = getDb();
+  const { status } = req.body;
+  const allowed = ['new', 'working', 'done', 'rejected'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Недопустимый статус' });
+
+  db.prepare('UPDATE leads SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status, req.params.id);
+  logAction(db, 'lead_status', `Заявка ID ${req.params.id} → ${status}`, req);
+  res.json({ ok: true });
 });
 
-router.get('/stats', async (req,res) => {
-  try{
-    const days=parseInt(req.query.days)||30;
-    const from=new Date(Date.now()-days*86400000).toISOString().split('T')[0];
-    const [byDay,byPage,byDevice,byReferer]=await Promise.all([
-      all("SELECT date(created_at) d,COUNT(DISTINCT session_id) c FROM visits WHERE date(created_at)>=? GROUP BY d ORDER BY d",[from]),
-      all("SELECT page,COUNT(*) c FROM visits WHERE date(created_at)>=? GROUP BY page ORDER BY c DESC LIMIT 10",[from]),
-      all("SELECT device,COUNT(*) c FROM visits WHERE date(created_at)>=? GROUP BY device",[from]),
-      all("SELECT referer,COUNT(*) c FROM visits WHERE date(created_at)>=? AND referer!='' GROUP BY referer ORDER BY c DESC LIMIT 10",[from]),
-    ]);
-    res.json({byDay,byPage,byDevice,byReferer});
-  }catch(e){res.status(500).json({error:e.message});}
+router.delete('/leads/:id', (req, res) => {
+  const db = getDb();
+  db.prepare('DELETE FROM leads WHERE id=?').run(req.params.id);
+  logAction(db, 'lead_delete', `Удалена заявка ID ${req.params.id}`, req);
+  res.json({ ok: true });
 });
 
-router.get('/calculator', async (req,res) => {
-  try{res.json(await all('SELECT * FROM calculator'));}catch(e){res.status(500).json({error:e.message});}
-});
-router.post('/calculator', async (req,res) => {
-  try{
-    for(const [id,value] of Object.entries(req.body)) await run('UPDATE calculator SET value=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[parseFloat(value)||0,id]);
-    logAction('calculator_update','Коэффициенты обновлены',req);res.json({ok:true});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-
-router.get('/log', async (req,res) => {
-  try{res.json(await all('SELECT * FROM admin_log ORDER BY created_at DESC LIMIT 100'));}
-  catch(e){res.status(500).json({error:e.message});}
+// Экспорт CSV
+router.get('/leads/export', (req, res) => {
+  const db = getDb();
+  const leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
+  const header = 'ID,Имя,Телефон,Сообщение,Статус,Дата\n';
+  const rows = leads.map(l =>
+    [l.id, `"${l.name}"`, `"${l.phone}"`, `"${(l.message || '').replace(/"/g, '""')}"`, l.status, l.created_at].join(',')
+  ).join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="leads.csv"');
+  res.send('\uFEFF' + header + rows);
 });
 
-router.get('/backup',(req,res)=>{
-  const dbPath=path.join(__dirname,'..','db','mebel.db');
-  if(!fs.existsSync(dbPath)) return res.status(404).json({error:'БД не найдена'});
-  logAction('backup','Скачан бэкап',req);
-  res.download(dbPath,`backup_${new Date().toISOString().split('T')[0]}.db`);
+// ─── НАСТРОЙКИ ───────────────────────────────────────────────────────────────
+router.get('/settings', (req, res) => {
+  const db = getDb();
+  const rows = db.prepare('SELECT * FROM settings').all();
+  const settings = {};
+  rows.forEach(r => settings[r.key] = r.value);
+  res.json(settings);
 });
 
-async function sendEmail({name,phone,message}){
-  if(!process.env.SMTP_USER||!process.env.NOTIFY_EMAIL) return;
-  const t=nodemailer.createTransport({host:process.env.SMTP_HOST||'smtp.gmail.com',port:587,secure:false,auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASS}});
-  await t.sendMail({from:process.env.SMTP_USER,to:process.env.NOTIFY_EMAIL,subject:'🛋️ Новая заявка',text:`Имя: ${name}\nТелефон: ${phone}\nСообщение: ${message}`});
+router.post('/settings', (req, res) => {
+  const db = getDb();
+  const allowed = ['phone', 'address', 'email', 'vk', 'telegram', 'whatsapp', 'site_name', 'site_tagline', 'banner_active', 'banner_title', 'banner_text'];
+  const update = db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
+
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) {
+      update.run(key, req.body[key]);
+    }
+  }
+  logAction(db, 'settings_update', 'Обновлены настройки сайта', req);
+  res.json({ ok: true });
+});
+
+// ─── ОТЗЫВЫ ──────────────────────────────────────────────────────────────────
+router.get('/reviews', (req, res) => {
+  const db = getDb();
+  const reviews = db.prepare('SELECT * FROM reviews ORDER BY created_at DESC').all();
+  res.json(reviews);
+});
+
+router.put('/reviews/:id/status', (req, res) => {
+  const db = getDb();
+  const { status } = req.body;
+  db.prepare('UPDATE reviews SET status=? WHERE id=?').run(status, req.params.id);
+  logAction(db, 'review_moderate', `Отзыв ID ${req.params.id} → ${status}`, req);
+  res.json({ ok: true });
+});
+
+router.delete('/reviews/:id', (req, res) => {
+  const db = getDb();
+  db.prepare('DELETE FROM reviews WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// Публичный эндпоинт для добавления отзыва
+router.post('/reviews/submit', (req, res) => {
+  const db = getDb();
+  const { author, text, rating } = req.body;
+  if (!author || !text) return res.status(400).json({ error: 'Заполните все поля' });
+  db.prepare('INSERT INTO reviews (author, text, rating) VALUES (?, ?, ?)').run(author, text, parseInt(rating) || 5);
+  res.json({ ok: true });
+});
+
+// ─── ПОРТФОЛИО ───────────────────────────────────────────────────────────────
+router.get('/portfolio', (req, res) => {
+  const db = getDb();
+  const items = db.prepare('SELECT * FROM portfolio ORDER BY sort_order, id DESC').all();
+  res.json(items);
+});
+
+router.post('/portfolio', (req, res) => {
+  if (!req.files || !req.files.image) return res.status(400).json({ error: 'Нет файла' });
+  const db = getDb();
+  const file = req.files.image;
+  const ext = path.extname(file.name).toLowerCase();
+  const filename = `portfolio_${Date.now()}${ext}`;
+  const uploadPath = path.join(__dirname, '..', 'public', 'uploads', filename);
+
+  file.mv(uploadPath, (err) => {
+    if (err) return res.status(500).json({ error: 'Ошибка загрузки' });
+    const result = db.prepare('INSERT INTO portfolio (title, description, image) VALUES (?, ?, ?)').run(
+      req.body.title || 'Работа', req.body.description || '', `/uploads/${filename}`
+    );
+    logAction(db, 'portfolio_add', `Добавлено в портфолио: ${req.body.title}`, req);
+    res.json({ id: result.lastInsertRowid });
+  });
+});
+
+router.delete('/portfolio/:id', (req, res) => {
+  const db = getDb();
+  const item = db.prepare('SELECT * FROM portfolio WHERE id=?').get(req.params.id);
+  if (item && item.image) {
+    const imgPath = path.join(__dirname, '..', 'public', item.image);
+    try { fs.unlinkSync(imgPath); } catch (e) {}
+  }
+  db.prepare('DELETE FROM portfolio WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// ─── FAQ ─────────────────────────────────────────────────────────────────────
+router.get('/faq', (req, res) => {
+  const db = getDb();
+  res.json(db.prepare('SELECT * FROM faq ORDER BY sort_order, id').all());
+});
+
+router.post('/faq', (req, res) => {
+  const db = getDb();
+  const { question, answer } = req.body;
+  if (!question || !answer) return res.status(400).json({ error: 'Заполните вопрос и ответ' });
+  const result = db.prepare('INSERT INTO faq (question, answer) VALUES (?, ?)').run(question, answer);
+  res.json({ id: result.lastInsertRowid });
+});
+
+router.put('/faq/:id', (req, res) => {
+  const db = getDb();
+  const { question, answer, active } = req.body;
+  db.prepare('UPDATE faq SET question=?, answer=?, active=? WHERE id=?').run(question, answer, active ? 1 : 0, req.params.id);
+  res.json({ ok: true });
+});
+
+router.delete('/faq/:id', (req, res) => {
+  const db = getDb();
+  db.prepare('DELETE FROM faq WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// ─── SEO ─────────────────────────────────────────────────────────────────────
+router.get('/seo', (req, res) => {
+  const db = getDb();
+  res.json(db.prepare('SELECT * FROM seo').all());
+});
+
+router.post('/seo', (req, res) => {
+  const db = getDb();
+  const { page, title, description, keywords } = req.body;
+  db.prepare('INSERT OR REPLACE INTO seo (page, title, description, keywords, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)')
+    .run(page || '/', title || '', description || '', keywords || '');
+  logAction(db, 'seo_update', `SEO обновлён для ${page}`, req);
+  res.json({ ok: true });
+});
+
+// ─── СТАТИСТИКА ──────────────────────────────────────────────────────────────
+router.get('/stats', (req, res) => {
+  const db = getDb();
+  const days = parseInt(req.query.days) || 30;
+  const from = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+
+  const byDay = db.prepare(`
+    SELECT date(created_at) d, COUNT(DISTINCT session_id) c
+    FROM visits WHERE date(created_at)>=? GROUP BY d ORDER BY d
+  `).all(from);
+
+  const byPage = db.prepare(`
+    SELECT page, COUNT(*) c FROM visits
+    WHERE date(created_at)>=? GROUP BY page ORDER BY c DESC LIMIT 10
+  `).all(from);
+
+  const byDevice = db.prepare(`
+    SELECT device, COUNT(*) c FROM visits
+    WHERE date(created_at)>=? GROUP BY device
+  `).all(from);
+
+  const byReferer = db.prepare(`
+    SELECT referer, COUNT(*) c FROM visits
+    WHERE date(created_at)>=? AND referer!='' GROUP BY referer ORDER BY c DESC LIMIT 10
+  `).all(from);
+
+  res.json({ byDay, byPage, byDevice, byReferer });
+});
+
+// ─── КАЛЬКУЛЯТОР ─────────────────────────────────────────────────────────────
+router.get('/calculator', (req, res) => {
+  const db = getDb();
+  res.json(db.prepare('SELECT * FROM calculator').all());
+});
+
+router.post('/calculator', (req, res) => {
+  const db = getDb();
+  const update = db.prepare('UPDATE calculator SET value=?, updated_at=CURRENT_TIMESTAMP WHERE id=?');
+  for (const [id, value] of Object.entries(req.body)) {
+    update.run(parseFloat(value) || 0, id);
+  }
+  logAction(db, 'calculator_update', 'Обновлены коэффициенты калькулятора', req);
+  res.json({ ok: true });
+});
+
+// ─── ЛОГ ─────────────────────────────────────────────────────────────────────
+router.get('/log', (req, res) => {
+  const db = getDb();
+  const log = db.prepare('SELECT * FROM admin_log ORDER BY created_at DESC LIMIT 100').all();
+  res.json(log);
+});
+
+// ─── БЭКАП ───────────────────────────────────────────────────────────────────
+router.get('/backup', (req, res) => {
+  const dbPath = path.join(__dirname, '..', 'db', 'mebel.db');
+  if (!fs.existsSync(dbPath)) return res.status(404).json({ error: 'БД не найдена' });
+  logAction(getDb(), 'backup', 'Скачан бэкап БД', req);
+  res.download(dbPath, `mebel_backup_${new Date().toISOString().split('T')[0]}.db`);
+});
+
+// ─── EMAIL ───────────────────────────────────────────────────────────────────
+async function sendEmailNotification({ name, phone, message }) {
+  if (!process.env.SMTP_USER || !process.env.NOTIFY_EMAIL) return;
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: false,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  });
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: process.env.NOTIFY_EMAIL,
+    subject: '🛋️ Новая заявка с сайта Мебель на заказ',
+    text: `Новая заявка!\n\nИмя: ${name || '—'}\nТелефон: ${phone}\nСообщение: ${message || '—'}`,
+    html: `<h2>Новая заявка с сайта</h2><p><b>Имя:</b> ${name || '—'}</p><p><b>Телефон:</b> ${phone}</p><p><b>Сообщение:</b> ${message || '—'}</p>`
+  });
 }
 
 module.exports = router;
