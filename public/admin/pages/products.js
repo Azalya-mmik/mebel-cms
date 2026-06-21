@@ -1,6 +1,9 @@
-// Products page
+// Каталог товаров R&T
 let allProducts = [];
 let editingId = null;
+
+const CATS = ['Табуреты', 'Стулья', 'Банкетки', 'Прочее'];
+const ST = { available: 'В наличии', order: 'Нет в наличии', hidden: 'Скрыт' };
 
 $('pageActions').innerHTML = `
   <button class="btn btn-accent" onclick="openAddModal()">+ Добавить товар</button>
@@ -11,23 +14,17 @@ $('content').innerHTML = `
     <input type="text" id="searchInput" placeholder="🔍 Поиск по названию..." oninput="filterProducts()">
     <select id="catFilter" onchange="filterProducts()">
       <option value="">Все категории</option>
-      <option value="beds">Кровати</option>
-      <option value="sofas">Диваны</option>
-      <option value="wardrobes">Шкафы</option>
-      <option value="kitchen">Кухни</option>
-      <option value="chairs">Стулья</option>
-      <option value="other">Прочее</option>
+      ${CATS.map(c => `<option value="${c}">${c}</option>`).join('')}
     </select>
     <select id="statusFilter" onchange="filterProducts()">
       <option value="">Все статусы</option>
       <option value="available">В наличии</option>
-      <option value="order">Под заказ</option>
+      <option value="order">Нет в наличии</option>
       <option value="hidden">Скрыт</option>
     </select>
   </div>
   <div class="products-grid" id="productsGrid"><div class="loader">Загрузка...</div></div>
 
-  <!-- Add/Edit Modal -->
   <div class="modal-overlay" id="productModal">
     <div class="modal">
       <div class="modal-header">
@@ -45,37 +42,42 @@ $('content').innerHTML = `
         <div class="form-row">
           <div class="form-group">
             <label>Название *</label>
-            <input type="text" id="pName" placeholder="Кровать двуспальная">
+            <input type="text" id="pName" placeholder="Табурет Рио">
           </div>
           <div class="form-group">
             <label>Цена (₽)</label>
-            <input type="number" id="pPrice" placeholder="35000">
+            <input type="number" id="pPrice" placeholder="1200">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Категория</label>
-            <select id="pCategory">
-              <option value="beds">Кровати</option>
-              <option value="sofas">Диваны</option>
-              <option value="wardrobes">Шкафы</option>
-              <option value="kitchen">Кухни</option>
-              <option value="chairs">Стулья</option>
-              <option value="other">Прочее</option>
-            </select>
+            <select id="pCategory">${CATS.map(c => `<option value="${c}">${c}</option>`).join('')}</select>
           </div>
           <div class="form-group">
-            <label>Статус</label>
+            <label>Наличие</label>
             <select id="pStatus">
               <option value="available">В наличии</option>
-              <option value="order">Под заказ</option>
-              <option value="hidden">Скрыт</option>
+              <option value="order">Нет в наличии</option>
+              <option value="hidden">Скрыт (не виден на сайте)</option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label>Описание</label>
-          <textarea id="pDesc" placeholder="Описание товара..."></textarea>
+          <label>Цена с поворотным механизмом (₽) — если есть, иначе пусто</label>
+          <input type="number" id="pCostRot" placeholder="напр. 1800">
+        </div>
+        <div class="form-group">
+          <label>Характеристики — каждая с новой строки</label>
+          <textarea id="pSpecs" rows="4" placeholder="Высота: 45 см&#10;Материал: берёзовая фанера&#10;Нагрузка: до 120 кг"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Цвета — каждый с новой строки</label>
+          <textarea id="pColors" rows="3" placeholder="Дуб&#10;Венге&#10;Белый"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Описание (необязательно)</label>
+          <textarea id="pDesc" rows="2" placeholder="Короткое описание..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -85,7 +87,6 @@ $('content').innerHTML = `
     </div>
   </div>
 
-  <!-- Image upload modal -->
   <div class="modal-overlay" id="imgModal">
     <div class="modal" style="max-width:400px">
       <div class="modal-header"><h3>Загрузить фото</h3><button class="modal-close" onclick="closeModal('imgModal')">✕</button></div>
@@ -105,13 +106,21 @@ $('content').innerHTML = `
   </div>
 `;
 
-const CAT_NAMES = { beds: 'Кровати', sofas: 'Диваны', wardrobes: 'Шкафы', kitchen: 'Кухни', chairs: 'Стулья', other: 'Прочее' };
+function parseList(v) { try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function firstImg(p) {
+  const imgs = parseList(p.images);
+  return (imgs.length ? imgs[0] : (p.image || ''));
+}
+function stBadge(s) {
+  const color = s === 'available' ? '#276749' : s === 'order' ? '#b7791f' : '#718096';
+  return `<span style="background:${color};color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">${ST[s] || s}</span>`;
+}
 
 async function loadProducts() {
   try {
     allProducts = await api('GET', '/api/products');
     filterProducts();
-  } catch(e) {
+  } catch (e) {
     $('productsGrid').innerHTML = `<div class="empty-state"><p>Ошибка: ${e.message}</p></div>`;
   }
 }
@@ -121,7 +130,7 @@ function filterProducts() {
   const cat = $('catFilter').value;
   const status = $('statusFilter').value;
   const filtered = allProducts.filter(p =>
-    (!q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)) &&
+    (!q || p.name.toLowerCase().includes(q)) &&
     (!cat || p.category === cat) &&
     (!status || p.status === status)
   );
@@ -130,27 +139,28 @@ function filterProducts() {
 
 function renderProducts(products) {
   if (!products.length) {
-    $('productsGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🛋️</div><p>Товаров не найдено</p></div>';
+    $('productsGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🪑</div><p>Товаров не найдено</p></div>';
     return;
   }
-  $('productsGrid').innerHTML = products.map(p => `
+  $('productsGrid').innerHTML = products.map(p => {
+    const img = firstImg(p);
+    return `
     <div class="product-card">
       <div class="product-img" onclick="openImgModal(${p.id})">
-        ${p.image ? `<img src="${p.image}" alt="${p.name}">` : '<div class="no-img">🪑</div>'}
+        ${img ? `<img src="${img}" alt="${p.name}">` : '<div class="no-img">🪑</div>'}
         <div style="position:absolute;bottom:6px;right:6px;background:#0007;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">📷 Заменить</div>
       </div>
       <div class="product-body">
         <div class="product-name">${p.name}</div>
-        <div>${badge(p.status)} <span style="font-size:12px;color:var(--text-muted)">${CAT_NAMES[p.category] || p.category}</span></div>
+        <div>${stBadge(p.status)} <span style="font-size:12px;color:var(--text-muted)">${p.category || ''}</span></div>
         <div class="product-price">${p.price > 0 ? fmtPrice(p.price) : 'По запросу'}</div>
-        ${p.description ? `<div style="font-size:12px;color:var(--text-muted);line-height:1.4">${p.description.substring(0, 80)}${p.description.length > 80 ? '…' : ''}</div>` : ''}
       </div>
       <div class="product-actions">
         <button class="btn btn-ghost btn-sm" style="flex:1" onclick="editProduct(${p.id})">✏️ Изменить</button>
         <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑️</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function openAddModal() {
@@ -158,8 +168,11 @@ function openAddModal() {
   $('modalTitle').textContent = 'Добавить товар';
   $('pName').value = '';
   $('pPrice').value = '';
+  $('pCostRot').value = '';
+  $('pSpecs').value = '';
+  $('pColors').value = '';
   $('pDesc').value = '';
-  $('pCategory').value = 'beds';
+  $('pCategory').value = 'Табуреты';
   $('pStatus').value = 'available';
   $('imgPreview').innerHTML = '<div class="upload-icon">📷</div><p>Нажмите для загрузки</p>';
   openModal('productModal');
@@ -172,11 +185,15 @@ function editProduct(id) {
   $('modalTitle').textContent = 'Редактировать товар';
   $('pName').value = p.name;
   $('pPrice').value = p.price;
+  $('pCostRot').value = (p.cost_rot != null ? p.cost_rot : '');
+  $('pSpecs').value = parseList(p.specs).join('\n');
+  $('pColors').value = parseList(p.colors).join('\n');
   $('pDesc').value = p.description || '';
-  $('pCategory').value = p.category;
+  $('pCategory').value = CATS.includes(p.category) ? p.category : 'Прочее';
   $('pStatus').value = p.status;
-  $('imgPreview').innerHTML = p.image
-    ? `<img src="${p.image}" style="max-height:120px;border-radius:8px">`
+  const img = firstImg(p);
+  $('imgPreview').innerHTML = img
+    ? `<img src="${img}" style="max-height:120px;border-radius:8px">`
     : '<div class="upload-icon">📷</div><p>Нажмите для загрузки</p>';
   openModal('productModal');
 }
@@ -184,12 +201,19 @@ function editProduct(id) {
 async function saveProduct() {
   const name = $('pName').value.trim();
   if (!name) { toast('Введите название', 'error'); return; }
-  const data = { name, price: $('pPrice').value, description: $('pDesc').value, category: $('pCategory').value, status: $('pStatus').value };
-
+  const data = {
+    name,
+    price: $('pPrice').value,
+    cost_rot: $('pCostRot').value,
+    description: $('pDesc').value,
+    category: $('pCategory').value,
+    status: $('pStatus').value,
+    specs: $('pSpecs').value,
+    colors: $('pColors').value,
+  };
   try {
     if (editingId) {
       await api('PUT', `/api/products/${editingId}`, data);
-      // Upload image if selected
       const file = $('imgFile').files[0];
       if (file) await uploadImg(editingId, file);
       toast('Товар обновлён', 'success');
@@ -201,7 +225,7 @@ async function saveProduct() {
     }
     closeModal('productModal');
     loadProducts();
-  } catch(e) {
+  } catch (e) {
     toast(e.message, 'error');
   }
 }
@@ -216,9 +240,7 @@ async function uploadImg(id, file) {
 function previewImg(input) {
   if (!input.files[0]) return;
   const reader = new FileReader();
-  reader.onload = e => {
-    $('imgPreview').innerHTML = `<img src="${e.target.result}" style="max-height:120px;border-radius:8px">`;
-  };
+  reader.onload = e => { $('imgPreview').innerHTML = `<img src="${e.target.result}" style="max-height:120px;border-radius:8px">`; };
   reader.readAsDataURL(input.files[0]);
 }
 
@@ -237,7 +259,7 @@ async function uploadProductImage() {
     toast('Фото загружено', 'success');
     closeModal('imgModal');
     loadProducts();
-  } catch(e) {
+  } catch (e) {
     toast(e.message, 'error');
   }
 }
@@ -248,7 +270,7 @@ async function deleteProduct(id) {
     await api('DELETE', `/api/products/${id}`);
     toast('Товар удалён');
     loadProducts();
-  } catch(e) {
+  } catch (e) {
     toast(e.message, 'error');
   }
 }

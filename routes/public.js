@@ -5,7 +5,7 @@ const router = express.Router();
 const nodemailer = require('nodemailer');
 const { getDb } = require('../db/init');
 
-// ─── НАСТРОЙКИ САЙТА (телефон, VK, баннер) + отзывы + FAQ ──────────────────────
+// ─── НАСТРОЙКИ САЙТА (телефон, VK, баннер) + FAQ + портфолио ───────────────────
 router.get('/public/config', (req, res) => {
   try {
     const db = getDb();
@@ -13,17 +13,43 @@ router.get('/public/config', (req, res) => {
     const settings = {};
     for (const r of rows) settings[r.key] = r.value;
 
-    const reviews = db
-      .prepare("SELECT author, text, rating, created_at FROM reviews WHERE status='approved' ORDER BY created_at DESC LIMIT 30")
-      .all();
-
     const faq = db
       .prepare('SELECT question, answer FROM faq WHERE active=1 ORDER BY sort_order, id')
       .all();
 
-    res.json({ settings, reviews, faq });
+    const portfolio = db
+      .prepare('SELECT title, description, image FROM portfolio ORDER BY sort_order, id DESC')
+      .all();
+
+    res.json({ settings, faq, portfolio });
   } catch (e) {
     res.status(500).json({ error: 'config_error' });
+  }
+});
+
+// ─── КАТАЛОГ ТОВАРОВ ДЛЯ САЙТА ────────────────────────────────────────────────
+router.get('/public/products', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = db
+      .prepare("SELECT * FROM products WHERE status != 'hidden' ORDER BY sort_order, id")
+      .all();
+    const parse = (v, def) => { try { const x = JSON.parse(v); return Array.isArray(x) ? x : def; } catch (e) { return def; } };
+    const products = rows.map(p => ({
+      id: p.id,
+      type: p.category || 'Прочее',
+      name: p.name,
+      cost: p.price || 0,
+      costRot: (p.cost_rot != null ? p.cost_rot : null),
+      desc: p.description || '',
+      inStock: p.status === 'available',
+      imgs: (() => { const a = parse(p.images, null); return (a && a.length) ? a : (p.image ? [p.image] : []); })(),
+      specs: parse(p.specs, []),
+      colors: parse(p.colors, []),
+    }));
+    res.json(products);
+  } catch (e) {
+    res.status(500).json({ error: 'products_error' });
   }
 });
 

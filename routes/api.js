@@ -60,15 +60,25 @@ router.get('/products', (req, res) => {
   res.json(products);
 });
 
+// helper: текст (строки через перенос) ИЛИ массив → JSON-массив строк
+function toJsonList(v) {
+  if (Array.isArray(v)) return JSON.stringify(v.map(s => String(s).trim()).filter(Boolean));
+  if (typeof v === 'string') return JSON.stringify(v.split('\n').map(s => s.trim()).filter(Boolean));
+  return JSON.stringify([]);
+}
+
 router.post('/products', (req, res) => {
   const db = getDb();
-  const { name, description, price, category, status } = req.body;
+  const { name, description, price, category, status, specs, colors, cost_rot } = req.body;
   if (!name) return res.status(400).json({ error: 'Название обязательно' });
 
   const result = db.prepare(`
-    INSERT INTO products (name, description, price, category, status)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(name, description || '', parseInt(price) || 0, category || 'other', status || 'available');
+    INSERT INTO products (name, description, price, category, status, specs, colors, cost_rot)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    name, description || '', parseInt(price) || 0, category || 'Прочее', status || 'available',
+    toJsonList(specs), toJsonList(colors), (cost_rot !== undefined && cost_rot !== '' ? parseInt(cost_rot) : null)
+  );
 
   logAction(db, 'product_create', `Создан товар: ${name}`, req);
   res.json({ id: result.lastInsertRowid });
@@ -76,12 +86,17 @@ router.post('/products', (req, res) => {
 
 router.put('/products/:id', (req, res) => {
   const db = getDb();
-  const { name, description, price, category, status, sort_order } = req.body;
+  const { name, description, price, category, status, sort_order, specs, colors, cost_rot } = req.body;
 
   db.prepare(`
-    UPDATE products SET name=?, description=?, price=?, category=?, status=?, sort_order=?, updated_at=CURRENT_TIMESTAMP
+    UPDATE products SET name=?, description=?, price=?, category=?, status=?, sort_order=?,
+      specs=?, colors=?, cost_rot=?, updated_at=CURRENT_TIMESTAMP
     WHERE id=?
-  `).run(name, description || '', parseInt(price) || 0, category || 'other', status || 'available', parseInt(sort_order) || 0, req.params.id);
+  `).run(
+    name, description || '', parseInt(price) || 0, category || 'Прочее', status || 'available',
+    parseInt(sort_order) || 0, toJsonList(specs), toJsonList(colors),
+    (cost_rot !== undefined && cost_rot !== '' ? parseInt(cost_rot) : null), req.params.id
+  );
 
   logAction(db, 'product_update', `Обновлён товар ID ${req.params.id}: ${name}`, req);
   res.json({ ok: true });
@@ -115,7 +130,8 @@ router.post('/products/:id/image', (req, res) => {
   file.mv(uploadPath, (err) => {
     if (err) return res.status(500).json({ error: 'Ошибка загрузки' });
     const imgUrl = `/uploads/${filename}`;
-    db.prepare('UPDATE products SET image=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(imgUrl, req.params.id);
+    db.prepare('UPDATE products SET image=?, images=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
+      .run(imgUrl, JSON.stringify([imgUrl]), req.params.id);
     logAction(db, 'product_image', `Загружено фото для товара ID ${req.params.id}`, req);
     res.json({ url: imgUrl });
   });
@@ -369,11 +385,52 @@ router.get('/log', (req, res) => {
 });
 
 // ─── БЭКАП ───────────────────────────────────────────────────────────────────
-router.get('/backup', (req, res) => {
-  const dbPath = path.join(__dirname, '..', 'db', 'mebel.db');
-  if (!fs.existsSync(dbPath)) return res.status(404).json({ error: 'БД не найдена' });
-  logAction(getDb(), 'backup', 'Скачан бэкап БД', req);
-  res.download(dbPath, `mebel_backup_${new Date().toISOString().split('T')[0]}.db`);
+// Скачать текущую базу файлом (локальный бэкап на компьютер)
+router.get('/backup/download', (req, res) => {
+  const { DB_PATH } = require('../db/init');
+  if (!fs.existsSync(DB_PATH)) return res.status(404).json({ error: 'БД не найдена' });
+  logAction(getDb(), 'backup_download', 'Скачан бэкап БД', req);
+  res.download(DB_PATH, `mebel_backup_${new Date().toISOString().split('T')[0]}.db`);
+});
+
+// Состояние бэкапов + список снимков в S3
+router.get('/backup', async (req, res) => {
+  const s3 = require('../db/s3sync');
+  if (!s3.isEnabled()) return res.json({ enabled: false, snapshots: [] });
+  try {
+    const snapshots = await s3.listSnapshots();
+    res.json({ enabled: true, snapshots });
+  } catch (e) {
+    res.status(500).json({ error: 'Не удалось получить список бэкапов: ' + (e.name || e.message) });
+  }
+});
+
+// Создать бэкап сейчас
+router.post('/backup/create', async (req, res) => {
+  const s3 = require('../db/s3sync');
+  if (!s3.isEnabled()) return res.status(400).json({ error: 'S3 не настроен' });
+  try {
+    const r = await s3.createSnapshot('вручную');
+    logAction(getDb(), 'backup_create', 'Создан бэкап', req);
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: 'Не удалось создать бэкап: ' + (e.name || e.message) });
+  }
+});
+
+// Восстановить (откат) из выбранного снимка
+router.post('/backup/restore', async (req, res) => {
+  const s3 = require('../db/s3sync');
+  if (!s3.isEnabled()) return res.status(400).json({ error: 'S3 не настроен' });
+  const { key } = req.body || {};
+  if (!key) return res.status(400).json({ error: 'Не указан бэкап' });
+  try {
+    const r = await s3.restoreSnapshot(key);
+    logAction(getDb(), 'backup_restore', 'Восстановление из бэкапа: ' + key, req);
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: 'Не удалось восстановить: ' + (e.name || e.message) });
+  }
 });
 
 // ─── EMAIL ───────────────────────────────────────────────────────────────────

@@ -72,6 +72,8 @@ function start(getDb) {
   getDbRef = getDb;
   if (!enabled) return;
   setInterval(() => { if (dirty) upload(); }, 30000);
+  // авто-снимок раз в 6 часов (если были изменения)
+  setInterval(() => { createSnapshot('авто').catch(() => {}); }, 6 * 60 * 60 * 1000);
 }
 
 function markDirty() {
@@ -100,4 +102,70 @@ async function upload() {
   }
 }
 
-module.exports = { restoreOnBoot, start, markDirty, upload };
+const SNAP_PREFIX = 'db/snapshots/';
+const SNAP_KEEP = 20;
+
+function isEnabled() { return enabled; }
+
+// Создать снимок (бэкап) текущей базы
+async function createSnapshot(label) {
+  if (!enabled) throw new Error('S3 не настроен');
+  try { if (getDbRef) getDbRef().pragma('wal_checkpoint(TRUNCATE)'); } catch (e) {}
+  const { PutObjectCommand } = require('@aws-sdk/client-s3');
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const key = SNAP_PREFIX + 'mebel-' + ts + '.db';
+  const body = fs.readFileSync(DB_PATH);
+  await client.send(new PutObjectCommand({
+    Bucket: bucket, Key: key, Body: body, ContentType: 'application/octet-stream',
+    Metadata: label ? { label: encodeURIComponent(label) } : undefined,
+  }));
+  await pruneSnapshots();
+  return { key, size: body.length };
+}
+
+// Список снимков
+async function listSnapshots() {
+  if (!enabled) return [];
+  const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
+  const out = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: SNAP_PREFIX }));
+  const items = (out.Contents || []).map(o => ({
+    key: o.Key,
+    size: o.Size,
+    date: o.LastModified ? new Date(o.LastModified).toISOString() : '',
+  }));
+  items.sort((a, b) => (a.date < b.date ? 1 : -1)); // новые сверху
+  return items;
+}
+
+async function pruneSnapshots() {
+  try {
+    const items = await listSnapshots();
+    if (items.length <= SNAP_KEEP) return;
+    const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+    for (const old of items.slice(SNAP_KEEP)) {
+      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: old.key }));
+    }
+  } catch (e) {}
+}
+
+// Восстановить базу из снимка (откат)
+async function restoreSnapshot(key) {
+  if (!enabled) throw new Error('S3 не настроен');
+  if (!key || key.indexOf(SNAP_PREFIX) !== 0) throw new Error('Неверный снимок');
+  const { GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+  const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  const bytes = await streamToBuffer(res.Body);
+  // переоткрыть базу с восстановленным файлом
+  const initMod = require('./init');
+  if (initMod.closeDb) initMod.closeDb();
+  fs.writeFileSync(DB_PATH, bytes);
+  if (initMod.reopenDb) initMod.reopenDb();
+  // сразу сделать восстановленное состояние «живым» в S3
+  await client.send(new PutObjectCommand({
+    Bucket: bucket, Key: KEY, Body: bytes, ContentType: 'application/octet-stream',
+  }));
+  dirty = false;
+  return { restored: bytes.length };
+}
+
+module.exports = { restoreOnBoot, start, markDirty, upload, isEnabled, createSnapshot, listSnapshots, restoreSnapshot };

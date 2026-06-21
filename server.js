@@ -91,16 +91,12 @@ app.get('/admin/leads', requireAuth, (req, res) => {
   res.send(adminLayout('leads'));
 });
 
-app.get('/admin/stats', requireAuth, (req, res) => {
-  res.send(adminLayout('stats'));
-});
-
 app.get('/admin/settings', requireAuth, (req, res) => {
   res.send(adminLayout('settings'));
 });
 
-app.get('/admin/reviews', requireAuth, (req, res) => {
-  res.send(adminLayout('reviews'));
+app.get('/admin/backup', requireAuth, (req, res) => {
+  res.send(adminLayout('backup'));
 });
 
 app.get('/admin/portfolio', requireAuth, (req, res) => {
@@ -134,8 +130,9 @@ app.use((req, res) => {
 // ─── СТАРТ ────────────────────────────────────────────────────────────────────
 (async () => {
   await s3sync.restoreOnBoot();   // скачать базу из S3 (если есть)
-  initDb();                       // открыть/создать базу
+  initDb();                       // открыть/создать базу (+ засеять каталог при первом запуске)
   s3sync.start(getDb);            // включить авто-выгрузку в S3
+  s3sync.markDirty();             // закрепить засеянный каталог в S3 сразу после старта
   app.listen(PORT, () => {
     console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);
     console.log(`🔐 Админка: http://localhost:${PORT}/admin`);
@@ -146,15 +143,14 @@ app.use((req, res) => {
 function adminLayout(page) {
   const pages = {
     dashboard: { title: 'Дашборд', icon: '📊' },
-    products: { title: 'Каталог товаров', icon: '🛋️' },
     leads: { title: 'Заявки', icon: '📋' },
-    stats: { title: 'Статистика', icon: '📈' },
+    products: { title: 'Каталог товаров', icon: '🛋️' },
+    portfolio: { title: 'Наши работы', icon: '🖼️' },
+    faq: { title: 'Частые вопросы', icon: '❓' },
     settings: { title: 'Настройки сайта', icon: '⚙️' },
-    reviews: { title: 'Отзывы', icon: '⭐' },
-    portfolio: { title: 'Портфолио', icon: '🖼️' },
-    faq: { title: 'FAQ', icon: '❓' },
     seo: { title: 'SEO', icon: '🔍' },
     calculator: { title: 'Калькулятор', icon: '🧮' },
+    backup: { title: 'Бэкап', icon: '💾' },
     log: { title: 'Журнал действий', icon: '📝' },
   };
 

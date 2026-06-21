@@ -172,18 +172,35 @@ function initDb() {
     insertCalc.run(id, label, value);
   }
 
-  // Добавить тестовые данные если таблицы пустые
-  const productCount = db.prepare('SELECT COUNT(*) as c FROM products').get();
-  if (productCount.c === 0) {
-    const sampleProducts = [
-      ['Кровать двуспальная "Классик"', 'Изготовлена из массива сосны. Изголовье с мягкой обивкой.', 35000, 'beds', 'available'],
-      ['Диван угловой "Комфорт"', 'Угловой диван с независимыми пружинами. Механизм дельфин.', 48000, 'sofas', 'available'],
-      ['Шкаф-купе 3-дверный', 'Шкаф с зеркальными дверями. Внутренняя организация на выбор.', 28000, 'wardrobes', 'available'],
-      ['Кухонный гарнитур "Модерн"', 'Гарнитур из МДФ с плёночным покрытием. Встроенная техника.', 75000, 'kitchen', 'available'],
-      ['Детская кровать "Карапуз"', 'Кровать из экологичных материалов. Размер 80×160.', 18000, 'beds', 'available'],
-    ];
-    const ins = db.prepare('INSERT INTO products (name, description, price, category, status) VALUES (?, ?, ?, ?, ?)');
-    for (const p of sampleProducts) ins.run(...p);
+  // ── Каталог: расширяем таблицу products нужными полями (миграция) ──
+  const cols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
+  const addCol = (name, def) => { if (!cols.includes(name)) db.exec(`ALTER TABLE products ADD COLUMN ${name} ${def}`); };
+  addCol('colors', 'TEXT');     // JSON-массив строк
+  addCol('specs', 'TEXT');      // JSON-массив строк
+  addCol('images', 'TEXT');     // JSON-массив data-URI/URL
+  addCol('cost_rot', 'INTEGER');// доп. цена (поворотный механизм и т.п.), может быть NULL
+
+  // ── Стартовый каталог R&T (15 товаров) — заливаем один раз ──
+  const catV = db.prepare("SELECT value FROM settings WHERE key='catalog_v'").get();
+  if (!catV || catV.value !== '2') {
+    let seed = [];
+    try { seed = require('./seed-catalog.json'); } catch (e) { seed = []; }
+    if (seed.length) {
+      db.exec('DELETE FROM products');
+      const ins = db.prepare(`INSERT INTO products
+        (name, description, price, category, status, image, images, specs, colors, cost_rot, sort_order)
+        VALUES (?, ?, ?, ?, 'available', ?, ?, ?, ?, ?, ?)`);
+      seed.forEach((p, idx) => {
+        const imgs = Array.isArray(p.imgs) ? p.imgs : [];
+        ins.run(
+          p.name || '', p.description || '', parseInt(p.cost) || 0, p.type || 'Прочее',
+          imgs[0] || '', JSON.stringify(imgs),
+          JSON.stringify(p.specs || []), JSON.stringify(p.colors || []),
+          (p.costRot != null ? parseInt(p.costRot) : null), idx
+        );
+      });
+    }
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('catalog_v', '2')").run();
   }
 
   // Пароль администратора берётся ТОЛЬКО из переменной окружения.
@@ -201,4 +218,17 @@ function checkAdminPassword() {
   }
 }
 
-module.exports = { getDb, initDb };
+function closeDb() {
+  if (db) { try { db.close(); } catch (e) {} db = null; }
+}
+
+// Переоткрыть базу после восстановления файла из бэкапа
+function reopenDb() {
+  closeDb();
+  // подчистить WAL/SHM, чтобы открылся именно восстановленный файл
+  const fs = require('fs');
+  for (const ext of ['-wal', '-shm']) { try { fs.unlinkSync(DB_PATH + ext); } catch (e) {} }
+  initDb();
+}
+
+module.exports = { getDb, initDb, closeDb, reopenDb, DB_PATH };
