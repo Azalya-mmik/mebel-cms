@@ -5,7 +5,8 @@ const fileUpload = require('express-fileupload');
 const path = require('path');
 const fs = require('fs');
 
-const { initDb } = require('./db/init');
+const { initDb, getDb } = require('./db/init');
+const s3sync = require('./db/s3sync');
 const authRouter = require('./routes/auth');
 const apiRouter = require('./routes/api');
 const trackVisit = require('./middleware/tracker');
@@ -60,6 +61,13 @@ app.use('/uploads', express.static(path.join(DATA_DIR, 'public', 'uploads')));
 
 // ─── РОУТЫ ────────────────────────────────────────────────────────────────────
 app.use('/admin', authRouter);
+// Любой изменяющий запрос к API → пометить базу на выгрузку в S3
+app.use('/api', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.on('finish', () => { if (res.statusCode < 400) s3sync.markDirty(); });
+  }
+  next();
+});
 app.use('/api', require('./routes/public')); // публичный API сайта (без авторизации)
 app.use('/api', apiRouter);                  // админ API (требует логина)
 
@@ -124,11 +132,15 @@ app.use((req, res) => {
 });
 
 // ─── СТАРТ ────────────────────────────────────────────────────────────────────
-initDb();
-app.listen(PORT, () => {
-  console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);
-  console.log(`🔐 Админка: http://localhost:${PORT}/admin`);
-});
+(async () => {
+  await s3sync.restoreOnBoot();   // скачать базу из S3 (если есть)
+  initDb();                       // открыть/создать базу
+  s3sync.start(getDb);            // включить авто-выгрузку в S3
+  app.listen(PORT, () => {
+    console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);
+    console.log(`🔐 Админка: http://localhost:${PORT}/admin`);
+  });
+})();
 
 // ─── ШАБЛОН АДМИНКИ ──────────────────────────────────────────────────────────
 function adminLayout(page) {
