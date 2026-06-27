@@ -69,7 +69,7 @@ header{position:sticky;top:0;z-index:30;background:var(--pine);color:#F4EFE3;pad
 .total{display:flex;justify-content:space-between;margin:14px 2px 16px;font-size:18px;font-weight:800}
 .field{margin-bottom:11px}.field label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:0 2px 5px}
 .field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:13px;padding:13px 14px;font-size:16px;font-family:inherit;background:var(--surface)}.field textarea{min-height:60px;resize:vertical}.field input:focus,.field textarea:focus{outline:none;border-color:var(--pine)}
-.send{display:grid;gap:9px;margin-top:6px;padding-bottom:12px}.send a,.send button{text-decoration:none;text-align:center;font-family:inherit;cursor:pointer;padding:14px;border-radius:14px;font-weight:800;font-size:15.5px;border:none}
+.send{display:grid;gap:9px;margin-top:6px}.send a,.send button{text-decoration:none;text-align:center;font-family:inherit;cursor:pointer;padding:14px;border-radius:14px;font-weight:800;font-size:15.5px;border:none}
 .b-call{background:var(--honey);color:#fff}.b-vk{background:#0077FF;color:#fff}.b-tg{background:#229ED9;color:#fff}.b-copy{background:var(--surface);color:var(--ink);border:1px solid var(--line)}.b-sms{background:#34C759;color:#fff}.b-max{background:#6E54E8;color:#fff}.sendhint{font-size:12px;line-height:1.4;color:#6a645a;font-weight:600;background:#f3efe7;border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:2px}.mtr-pitch{font-size:13.5px;line-height:1.42;color:#3a352e;margin:2px 2px 14px}.mtr-steps{display:grid;gap:8px;margin-bottom:14px}.mtr-step{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 13px}.mtr-step b{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--honey);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px}.mtr-step span{font-size:13px;font-weight:600;color:#3a352e}.mtr-cat{display:block;text-align:center;background:#21372F;color:#fff;text-decoration:none;font-weight:800;padding:13px;border-radius:13px;margin-bottom:16px}.mtr-calc{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}.mtr-h{font-weight:800;font-size:15px;margin-bottom:10px;color:#2f2a22}.mtr-out{background:#f3efe7;border-radius:12px;padding:9px 13px;margin:6px 0 12px}.mtr-row{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:700;color:#3a352e;padding:3px 0}.mtr-row b{font-size:15px}.mtr-save b{color:#1f9d57}.mtr-note{font-size:11.5px;color:#7a746a;font-weight:600;margin-top:9px;line-height:1.35;text-align:center}.cdelivery{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px;font-weight:700;color:#6a645a;padding:11px 0;border-top:1px solid var(--line)}.cdelivery b{font-size:13.5px;color:#3a352e;white-space:nowrap}.xsell{position:fixed;inset:0;z-index:200;background:#0007;display:none;align-items:flex-end;justify-content:center}.xsell.show{display:flex}.xsell-card{background:#fff;width:100%;max-width:680px;border-radius:20px 20px 0 0;padding:22px 18px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px #0004;animation:xslide .22s ease}@keyframes xslide{from{transform:translateY(40px);opacity:.4}to{transform:translateY(0);opacity:1}}.xsell-t{font-size:18px;font-weight:800;text-align:center;color:#21372F;margin-bottom:7px}.xsell-x{font-size:13.5px;line-height:1.42;color:#3a352e;text-align:center;margin-bottom:15px}.xsell-go{width:100%;border:none;cursor:pointer;font-family:inherit;background:var(--honey);color:#fff;font-weight:800;font-size:15.5px;padding:14px;border-radius:14px}.xsell-skip{width:100%;border:none;cursor:pointer;font-family:inherit;background:transparent;color:#6a645a;font-weight:700;font-size:14px;padding:12px;margin-top:4px}.delnote{font-size:11.5px;line-height:1.4;color:#8a8378;font-weight:600;margin:0 2px 14px;padding:8px 11px;background:#f3efe7;border:1px solid var(--line);border-radius:10px}.delnote b{color:#b07a2e}.mtr-disc{font-size:10.5px;line-height:1.38;color:#9a948a;margin-top:12px;text-align:center}.mtr-info{font-size:12.5px;line-height:1.4;color:#3a352e;font-weight:600;background:#f3efe7;border-radius:12px;padding:11px 13px;margin:6px 0 12px}.maxnote{margin-top:6px;font-size:12.5px;font-weight:700;line-height:1.35;color:#7a4a12;background:#fbecd9;border:1px solid #f0d3a8;border-radius:12px;padding:9px 11px}
 .empty{text-align:center;color:var(--muted);padding:26px;font-weight:700}
 .cartbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--pine);color:#fff;padding:12px 16px;display:none;align-items:center;justify-content:space-between;box-shadow:0 -6px 22px rgba(0,0,0,.18)}.cartbar.show{display:flex}.cartbar small{display:block;opacity:.75;font-size:12px}.cartbar b{font-size:17px}.cartbar .go{background:var(--honey);border:none;color:#fff;font-weight:800;font-size:15px;padding:12px 20px;border-radius:13px;cursor:pointer;font-family:inherit}
@@ -82,18 +82,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
 .wrap{max-width:1180px}
 #vHome{padding-bottom:28px}
 .lp-hero{margin:22px 0 24px;background:linear-gradient(105deg,#fff8ec 0%,#fcfaf3 48%,#eadfca 100%);border:1px solid var(--line);border-radius:28px;overflow:hidden;display:grid;grid-template-columns:1.04fr .96fr;min-height:430px;box-shadow:0 10px 34px rgba(33,55,47,.10)}
-.lp-hero-copy{padding:46px 42px;display:flex;flex-direction:column;justify-content:center}.lp-kicker{display:inline-flex;align-items:center;gap:8px;width:max-content;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 13px;color:var(--pine);font-size:13px;font-weight:900;margin-bottom:18px}.lp-kicker:before{content:"✓";display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--honey);color:#fff;font-size:12px}.lp-hero h1{margin:0;color:var(--pine);font-size:46px;line-height:1.05;font-weight:900;letter-spacing:-.8px}.lp-hero h1 span{color:var(--honey-d)}.lp-hero p{font-size:18px;line-height:1.55;color:#35443d;margin:20px 0 0;max-width:620px}.lp-hero-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:26px}.lp-btn{border:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;background:var(--honey);color:#fff;font-family:inherit;font-weight:900;font-size:16px;border-radius:15px;padding:16px 24px;cursor:pointer;box-shadow:0 8px 18px rgba(217,142,60,.24)}.lp-btn:active{background:var(--honey-d)}.lp-btn.alt{background:var(--pine);box-shadow:none}.lp-micro{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;color:#6b746d;font-size:13px;font-weight:800}.lp-micro span:before{content:"✓";color:var(--honey-d);margin-right:6px}.lp-hero-visual{position:relative;min-height:360px;background:radial-gradient(circle at 40% 35%,#fff 0%,#eadfca 58%,#d9cdb8 100%);display:flex;align-items:end;justify-content:center;padding:24px}.lp-hero-visual img{width:100%;height:100%;max-height:390px;object-fit:contain;filter:drop-shadow(0 24px 34px rgba(0,0,0,.18))}.lp-float{position:absolute;left:24px;bottom:24px;background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:18px;padding:14px 16px;box-shadow:0 10px 25px rgba(0,0,0,.10);font-size:13px}.lp-float b{display:block;color:var(--pine);font-size:15px;margin-bottom:3px}.lp-section{margin:34px 0}.lp-title{text-align:center;color:var(--pine);font-size:30px;line-height:1.15;font-weight:900;margin:0 0 18px}.lp-subtitle{text-align:center;color:var(--muted);font-weight:700;margin:-6px auto 20px;max-width:680px}.lp-benefits{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.lp-benefit{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 17px;text-align:center;min-height:178px}.lp-ico{width:48px;height:48px;border-radius:16px;background:#f5e6d3;color:var(--pine);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:25px}.lp-benefit b{display:block;color:var(--pine);font-size:15.5px;margin-bottom:8px}.lp-benefit span{display:block;color:#55625a;font-size:13px;line-height:1.4;font-weight:700}.lp-trustbox{display:grid;grid-template-columns:1fr 1fr;gap:20px;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px}.lp-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.lp-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}.lp-stat b{display:block;color:var(--honey-d);font-size:30px;line-height:1}.lp-stat span{font-weight:800;color:var(--pine);font-size:13px}.lp-proof{display:grid;gap:12px}.lp-proof-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}.lp-stars{color:var(--honey-d);letter-spacing:1px;font-weight:900}.lp-proof-card p{margin:8px 0 0;color:#48544d;font-size:14px;line-height:1.45}.lp-proof-card b{color:var(--pine)}.lp-cats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.lp-cat{position:relative;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#ece6d8;min-height:260px;cursor:pointer}.lp-cat img{width:100%;height:100%;object-fit:contain;padding:8px;display:block}.lp-cat .lbl{position:absolute;left:0;right:0;bottom:0;padding:22px;background:linear-gradient(transparent,rgba(20,30,25,.88));color:#fff}.lp-cat b{display:block;font-size:23px;line-height:1}.lp-cat span{display:block;margin-top:6px;font-size:13px;opacity:.93}.lp-reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.lp-review{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}.lp-review-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}.lp-avatar{width:42px;height:42px;border-radius:50%;background:#f2dfc7;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--pine)}.lp-review b{color:var(--pine)}.lp-review small{display:block;color:var(--muted);font-weight:800}.lp-review p{margin:10px 0 0;color:#46524b;font-size:14px;line-height:1.48}.lp-final{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}.lp-faq,.lp-form{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;padding-bottom:108px}.lp-faq details{border-top:1px solid var(--line);padding:14px 0}.lp-faq details:first-of-type{border-top:none}.lp-faq summary{cursor:pointer;color:var(--pine);font-weight:900}.lp-faq p{margin:8px 0 0;color:#5d685f;font-weight:700;font-size:14px}.lp-form h3,.lp-faq h3{margin:0 0 14px;color:var(--pine);font-size:24px}.lp-form p{margin:0 0 16px;color:#56635c;font-weight:700}.lp-trustline{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;color:#7a746a;font-size:12px;font-weight:800;text-align:center}.lp-trustline:before{content:"🔒"}.lp-social{margin-top:18px}
+.lp-hero-copy{padding:46px 42px;display:flex;flex-direction:column;justify-content:center}.lp-kicker{display:inline-flex;align-items:center;gap:8px;width:max-content;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 13px;color:var(--pine);font-size:13px;font-weight:900;margin-bottom:18px}.lp-kicker:before{content:"✓";display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--honey);color:#fff;font-size:12px}.lp-hero h1{margin:0;color:var(--pine);font-size:46px;line-height:1.05;font-weight:900;letter-spacing:-.8px}.lp-hero h1 span{color:var(--honey-d)}.lp-hero p{font-size:18px;line-height:1.55;color:#35443d;margin:20px 0 0;max-width:620px}.lp-hero-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:26px}.lp-btn{border:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;background:var(--honey);color:#fff;font-family:inherit;font-weight:900;font-size:16px;border-radius:15px;padding:16px 24px;cursor:pointer;box-shadow:0 8px 18px rgba(217,142,60,.24)}.lp-btn:active{background:var(--honey-d)}.lp-btn.alt{background:var(--pine);box-shadow:none}.lp-micro{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;color:#6b746d;font-size:13px;font-weight:800}.lp-micro span:before{content:"✓";color:var(--honey-d);margin-right:6px}.lp-hero-visual{position:relative;min-height:360px;background:radial-gradient(circle at 40% 35%,#fff 0%,#eadfca 58%,#d9cdb8 100%);display:flex;align-items:end;justify-content:center;padding:24px}.lp-hero-visual img{width:100%;height:100%;max-height:390px;object-fit:contain;filter:drop-shadow(0 24px 34px rgba(0,0,0,.18))}.lp-float{position:absolute;left:24px;bottom:24px;background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:18px;padding:14px 16px;box-shadow:0 10px 25px rgba(0,0,0,.10);font-size:13px}.lp-float b{display:block;color:var(--pine);font-size:15px;margin-bottom:3px}.lp-section{margin:34px 0}.lp-title{text-align:center;color:var(--pine);font-size:30px;line-height:1.15;font-weight:900;margin:0 0 18px}.lp-subtitle{text-align:center;color:var(--muted);font-weight:700;margin:-6px auto 20px;max-width:680px}.lp-benefits{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.lp-benefit{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 17px;text-align:center;min-height:178px}.lp-ico{width:48px;height:48px;border-radius:16px;background:#f5e6d3;color:var(--pine);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:25px}.lp-benefit b{display:block;color:var(--pine);font-size:15.5px;margin-bottom:8px}.lp-benefit span{display:block;color:#55625a;font-size:13px;line-height:1.4;font-weight:700}.lp-trustbox{display:grid;grid-template-columns:1fr 1fr;gap:20px;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px}.lp-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.lp-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}.lp-stat b{display:block;color:var(--honey-d);font-size:30px;line-height:1}.lp-stat span{font-weight:800;color:var(--pine);font-size:13px}.lp-proof{display:grid;gap:12px}.lp-proof-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}.lp-stars{color:var(--honey-d);letter-spacing:1px;font-weight:900}.lp-proof-card p{margin:8px 0 0;color:#48544d;font-size:14px;line-height:1.45}.lp-proof-card b{color:var(--pine)}.lp-cats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.lp-cat{position:relative;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#ece6d8;min-height:260px;cursor:pointer}.lp-cat img{width:100%;height:100%;object-fit:contain;padding:8px;display:block}.lp-cat .lbl{position:absolute;left:0;right:0;bottom:0;padding:22px;background:linear-gradient(transparent,rgba(20,30,25,.88));color:#fff}.lp-cat b{display:block;font-size:23px;line-height:1}.lp-cat span{display:block;margin-top:6px;font-size:13px;opacity:.93}.lp-reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.lp-review{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}.lp-review-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}.lp-avatar{width:42px;height:42px;border-radius:50%;background:#f2dfc7;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--pine)}.lp-review b{color:var(--pine)}.lp-review small{display:block;color:var(--muted);font-weight:800}.lp-review p{margin:10px 0 0;color:#46524b;font-size:14px;line-height:1.48}.lp-final{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}.lp-faq,.lp-form{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px}.lp-faq details{border-top:1px solid var(--line);padding:14px 0}.lp-faq details:first-of-type{border-top:none}.lp-faq summary{cursor:pointer;color:var(--pine);font-weight:900}.lp-faq p{margin:8px 0 0;color:#5d685f;font-weight:700;font-size:14px}.lp-form h3,.lp-faq h3{margin:0 0 14px;color:var(--pine);font-size:24px}.lp-form p{margin:0 0 16px;color:#56635c;font-weight:700}.lp-trustline{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;color:#7a746a;font-size:12px;font-weight:800;text-align:center}.lp-trustline:before{content:"🔒"}.lp-social{margin-top:18px}
 @media(max-width:900px){.lp-hero{grid-template-columns:1fr}.lp-hero-copy{padding:34px 24px}.lp-hero h1{font-size:36px}.lp-hero p{font-size:16px}.lp-benefits{grid-template-columns:repeat(2,1fr)}.lp-cats{grid-template-columns:repeat(2,1fr)}.lp-trustbox,.lp-final{grid-template-columns:1fr}.lp-reviews{grid-template-columns:1fr}.lp-hero-visual{min-height:250px}.lp-float{left:16px;bottom:16px}}
-@media(max-width:520px){body{padding-bottom:86px}.wrap{padding:0 12px}.lp-hero{margin-top:14px;border-radius:22px;min-height:0}.lp-hero-copy{padding:28px 20px}.lp-kicker{font-size:12px}.lp-hero h1{font-size:31px;letter-spacing:-.4px}.lp-hero p{font-size:15px;line-height:1.48}.lp-btn{width:100%;padding:18px 18px;min-height:56px;font-size:17px}.lp-micro{gap:8px;display:grid}.lp-hero-visual{padding:16px;min-height:220px}.lp-float{position:static;margin:10px 0 0;width:100%}.lp-title{font-size:24px;text-align:left}.lp-subtitle{text-align:left}.lp-benefits,.lp-cats,.lp-stats{grid-template-columns:1fr}.lp-benefit{text-align:left;display:flex;gap:14px;min-height:0}.lp-ico{margin:0;flex:0 0 auto}.lp-cat{min-height:230px}.lp-trustbox,.lp-faq,.lp-form{padding:18px;border-radius:18px}.lp-section{margin:28px 0}.hcontact{gap:8px}.callbtn{padding:8px 10px}.shop-name{font-size:16px}}
-
-/* ===== Conversion improvements ===== */
-.lp-social-proof{font-size:13px;color:#5a6b60;font-weight:700;margin-bottom:14px;letter-spacing:.1px}
-@media(max-width:520px){
-  .lp-btn{min-height:56px!important;font-size:17px!important;padding:18px!important}
-  .lp-form{padding-bottom:108px!important}
-  .send{padding-bottom:110px}
-  #leadForm .lp-btn{min-height:56px;font-size:17px}
-}
+@media(max-width:520px){body{padding-bottom:86px}.wrap{padding:0 12px}.lp-hero{margin-top:14px;border-radius:22px;min-height:0}.lp-hero-copy{padding:28px 20px}.lp-kicker{font-size:12px}.lp-hero h1{font-size:31px;letter-spacing:-.4px}.lp-hero p{font-size:15px;line-height:1.48}.lp-btn{width:100%;padding:15px 18px}.lp-micro{gap:8px;display:grid}.lp-hero-visual{padding:16px;min-height:220px}.lp-float{position:static;margin:10px 0 0;width:100%}.lp-title{font-size:24px;text-align:left}.lp-subtitle{text-align:left}.lp-benefits,.lp-cats,.lp-stats{grid-template-columns:1fr}.lp-benefit{text-align:left;display:flex;gap:14px;min-height:0}.lp-ico{margin:0;flex:0 0 auto}.lp-cat{min-height:230px}.lp-trustbox,.lp-faq,.lp-form{padding:18px;border-radius:18px}.lp-section{margin:28px 0}.hcontact{gap:8px}.callbtn{padding:8px 10px}.shop-name{font-size:16px}}
 
 </style></head><body>
 <header>
@@ -112,11 +103,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
     <section class="lp-hero">
       <div class="lp-hero-copy">
         <div class="lp-kicker">Бесплатный расчёт за 10 минут</div>
-        <div style="font-size:13px;color:#5a6b60;font-weight:700;margin-bottom:14px;letter-spacing:.1px">★★★★★&nbsp; 127 отзывов &nbsp;·&nbsp; 500+ выполненных заказов по РТ</div>
-        <h1>Мебель под <span>ваш размер</span> — напрямую от производителя</h1>
-        <p>Кровати, стулья, банкетки и матрасы без наценки магазина. Поможем выбрать ткань, рассчитаем цену и привезём — звоните или пишите.</p>
+        <h1>Мебель на заказ <span>без переплаты магазину</span> — под ваш размер и бюджет</h1>
+        <p>Кровати, стулья, банкетки и матрасы напрямую от производителя. Поможем выбрать материалы, рассчитаем точную стоимость и организуем доставку.</p>
         <div class="lp-hero-actions">
-          <button class="lp-btn" onclick="document.getElementById('leadForm').scrollIntoView({behavior:'smooth'});setTimeout(function(){document.getElementById('lPhone').focus();},400)">Узнать цену — бесплатно</button>
+          <button class="lp-btn" onclick="leadJump()">Получить расчёт стоимости</button>
           <button class="lp-btn alt" onclick="document.getElementById('lpCatalog').scrollIntoView({behavior:'smooth'})">Смотреть каталог</button>
         </div>
         <div class="lp-micro"><span>Бесплатная консультация</span><span>Без обязательств</span><span>Ответ за 10 минут</span></div>
@@ -173,29 +163,30 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
         <div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">Р</div><div><b>Рустем</b><small>Набережные Челны</small></div></div><div class="lp-stars">★★★★★</div><p>Заказывали кровать и матрас. Очень довольны сервисом и качеством. Цена приятнее, чем в магазинах.</p></div>
         <div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">Е</div><div><b>Елена</b><small>Казань</small></div></div><div class="lp-stars">★★★★★</div><p>Подобрали ткань под наш интерьер, всё сделали аккуратно и быстро. Рекомендую.</p></div>
       </div>
-      <div style="text-align:center;margin-top:18px"><button class="lp-btn" onclick="document.getElementById('leadForm').scrollIntoView({behavior:'smooth'});setTimeout(function(){document.getElementById('lPhone').focus();},400)">Узнать цену — бесплатно</button></div>
+      <div style="text-align:center;margin-top:18px"><button class="lp-btn" onclick="leadJump()">Подобрать мебель бесплатно</button></div>
     </section>
 
     <section class="lp-section lp-final">
-      <div class="lp-faq" id="lpFaqBlock"><div class="loader-faq" style="color:var(--muted);font-size:14px;padding:8px 0">Загрузка вопросов…</div></div>
+      <div class="lp-faq">
+        <h3>Частые вопросы</h3>
+        <details open><summary>Сколько изготавливается мебель?</summary><p>В среднем 14–30 дней — зависит от модели, комплектации и загруженности производства.</p></details>
+        <details><summary>Можно изменить размеры?</summary><p>Да, мы изготавливаем мебель по вашим индивидуальным размерам.</p></details>
+        <details><summary>Можно выбрать ткань?</summary><p>Да, есть более 50 вариантов тканей и цветов под любой интерьер.</p></details>
+        <details><summary>Есть доставка?</summary><p>Да, организуем доставку и заранее согласуем удобную дату.</p></details>
+        <details><summary>Как оформить заказ?</summary><p>Оставьте заявку — мы свяжемся, уточним детали и подготовим расчёт.</p></details>
+      </div>
       <div class="lp-form" id="leadForm">
         <h3>Осталось сделать один шаг</h3>
         <p>Оставьте имя и телефон — мы свяжемся с вами, уточним детали и подготовим точный расчёт без обязательств.</p>
         <div class="field"><label>Ваше имя</label><input id="lName" placeholder="Как к вам обращаться"></div>
         <div class="field"><label>Телефон</label><input id="lPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 ___ ___-__-__"></div>
-        <button class="lp-btn" style="width:100%" onclick="(function(){
-  var ln=document.getElementById('lName'),lp=document.getElementById('lPhone');
-  var cn=document.getElementById('cName'),cp=document.getElementById('cPhone');
-  if(ln&&cn&&ln.value.trim())cn.value=ln.value.trim();
-  if(lp&&cp&&lp.value.trim())cp.value=lp.value.trim();
-  submitLead();
-})()">Отправить заявку — бесплатно</button>
-        <div class="lp-trustline">🔒 Данные не передаём третьим лицам — только для связи по заявке</div>
+        <button class="lp-btn" style="width:100%" onclick="leadJump(true)">Получить расчёт стоимости</button>
+        <div class="lp-trustline">Ваши данные используются только для связи по заявке</div>
       </div>
     </section>
 
     <div class="social-h lp-social">Мы тоже по мебели — заходите:</div>
-    <div class="social"><a class="soc vk" id="socVk" href="#" target="_blank" rel="noopener" style="display:none"><span class="soc-i">VK</span>ВКонтакте</a><a class="soc av" id="socAv" href="#" target="_blank" rel="noopener" style="display:none"><span class="soc-i">A</span>Авито</a><a class="soc tg" id="socTg" href="#" target="_blank" rel="noopener" style="display:none"><span class="soc-i">TG</span>Telegram</a></div>
+    <div class="social"><a class="soc vk" href="https://vk.ru/club140569973" target="_blank" rel="noopener"><span class="soc-i">VK</span>ВКонтакте</a><a class="soc av" href="https://www.avito.ru/user/4bfc13ef997d795e6d10c928bc5ade9f/profile?src=sharing" target="_blank" rel="noopener"><span class="soc-i">A</span>Авито</a><a class="soc tg" href="https://t.me/MVildi" target="_blank" rel="noopener"><span class="soc-i">TG</span>Telegram</a></div>
     <div id="rtWorks" class="rt-section" style="display:none"></div>
     <div id="rtFaq" class="rt-section" style="display:none"></div>
   </div>
@@ -214,8 +205,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
     <div class="step"><h4>Длина <span class="hint">цена одинаковая</span></h4><div class="opts" id="stepLength"></div></div>
     <div class="step"><h4>4. Цвет велюра (ткань — Velutto) <span class="hint" id="colorName"></span></h4><div id="stepColor"></div></div>
     <div class="step"><h4>5. Опции</h4><div class="opts" id="stepLift" style="margin-bottom:9px"></div><div class="hint" style="margin:2px 2px 9px;color:#be7626;font-weight:700">Кровати идут только с подъёмным механизмом.</div><div class="hint" style="margin:2px 2px 6px">Бельевой отдел:</div><div class="opts" id="stepStorage"></div></div>
-    <div id="bedHint" style="display:none;background:#fff8ec;border:1px solid #f0d3a8;border-radius:11px;padding:9px 13px;font-size:13px;font-weight:700;color:#7a4a12;margin-top:12px;margin-bottom:0">Выберите вариант: с подъёмным механизмом или без</div>
-<button class="bedadd" id="bedAdd">Добавить в заявку</button>
+    <button class="bedadd" id="bedAdd">Добавить в заявку</button>
   </div>
   <div id="vCart" style="display:none">
     <div class="cart-h">Корзина</div>
@@ -223,7 +213,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
     <div id="cartSummary"><div class="cdelivery" id="cartDelivery" style="display:none"></div><div class="total"><span>Итого</span><span id="cartTotal">0 ₽</span></div>
     <div class="field"><label>Ваше имя</label><input id="cName" placeholder="Как к вам обращаться"></div>
     <div class="field"><label>Телефон</label><input id="cPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="+7 ___ ___-__-__"></div>
-    <div class="field"><label>Комментарий (удобное время и т.п.)</label><textarea id="cNote"></textarea></div>
+    <div class="field"><label>Адрес доставки</label><input id="cAddr" autocomplete="street-address" placeholder="Город, улица, дом, квартира"></div><div class="field"><label>Комментарий (удобное время и т.п.)</label><textarea id="cNote"></textarea></div>
     <div class="send"><button class="b-send" id="bSend" onclick="submitLead()">Оставить заявку</button></div></div>
   </div>
 </div>
@@ -345,9 +335,7 @@ function paintBed(){
  [...document.querySelectorAll("#stepColor .sw")].forEach(s=>s.classList.toggle("on",s.dataset.n===cfg.color.n));
  [...document.querySelectorAll("#stepLift .opt")].forEach(o=>o.classList.toggle("on",(o.dataset.v==="1")===cfg.lift));
  [...document.querySelectorAll("#stepStorage .opt")].forEach(o=>o.classList.toggle("on",o.dataset.v===cfg.storage));
- var ba=document.getElementById("bedAdd");if(cfg.lift){ba.disabled=false;ba.classList.remove("disabled");ba.textContent="Добавить в заявку";
-var _hint=document.getElementById("bedHint");if(_hint){_hint.style.display="none";};}else{ba.disabled=true;ba.classList.add("disabled");ba.textContent="Добавить в заявку";
-var _hint=document.getElementById("bedHint");if(_hint){_hint.style.display="";};}
+ var ba=document.getElementById("bedAdd");if(cfg.lift){ba.disabled=false;ba.classList.remove("disabled");ba.textContent="Добавить в заявку";}else{ba.disabled=true;ba.classList.add("disabled");ba.textContent="Сначала выберите подъёмный механизм";}
 }
 function buildBeds(){
  const sd=document.getElementById("stepDesign");BED.designs.forEach(d=>{const t=document.createElement("div");t.className="tile";t.dataset.k=d.k;t.innerHTML='<img><b>'+d.n+'</b><span>'+d.d+'</span>';t.onclick=()=>{cfg.design=d.k;paintBed();};sd.appendChild(t);});
@@ -385,10 +373,10 @@ function renderCart(){const items=entries(),list=document.getElementById("cartLi
   list.appendChild(row);});
  var _dl=delivery(),_dv=document.getElementById("cartDelivery");if(_dl){_dv.style.display="";_dv.innerHTML='<span>'+_dl.label+'</span><b'+(_dl.fee>0?'':' style="color:#1f9d57"')+'>'+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+'</b>';}else{_dv.style.display="none";}document.getElementById("cartTotal").textContent=fmt(totals().s+(_dl?_dl.fee:0));buildLinks();}
 function orderText(){let t="Здравствуйте! Хочу заказать:\n";entries().forEach(e=>{t+="• "+e.name+(e.sub?" ("+e.sub+")":"")+" — "+e.qty+" шт. ("+(e.price>0?fmt(e.qty*e.price):"цена по запросу")+")\n";});
- var _dl=delivery();if(_dl)t+="• "+_dl.label+" — "+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+"\n";t+="Итого: "+fmt(totals().s+(_dl?_dl.fee:0));const n=document.getElementById("cName").value.trim(),ph=document.getElementById("cPhone").value.trim(),nt=document.getElementById("cNote").value.trim();
- if(n)t+="\nИмя: "+n;if(ph)t+="\nТелефон: "+ph;if(nt)t+="\nКомментарий: "+nt;return t;}
+ var _dl=delivery();if(_dl)t+="• "+_dl.label+" — "+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+"\n";t+="Итого: "+fmt(totals().s+(_dl?_dl.fee:0));const n=document.getElementById("cName").value.trim(),ph=document.getElementById("cPhone").value.trim(),ad=(document.getElementById("cAddr")?document.getElementById("cAddr").value.trim():""),nt=document.getElementById("cNote").value.trim();
+ if(n)t+="\nИмя: "+n;if(ph)t+="\nТелефон: "+ph;if(ad)t+="\nАдрес: "+ad;if(nt)t+="\nКомментарий: "+nt;return t;}
 function buildLinks(){var c=document.getElementById("bCall");if(c)c.href="tel:"+CONFIG.phone;}function xsellOpen(){document.getElementById("xsell").classList.add("show");}function xsellClose(){document.getElementById("xsell").classList.remove("show");}function xsellGo(){xsellClose();showMatras();}function xsellCart(){xsellClose();showCart();}
-["cName","cPhone","cNote"].forEach(id=>{var _e=document.getElementById(id);if(_e)_e.addEventListener("input",buildLinks);});(function(){var ph=document.getElementById("cPhone");if(!ph)return;function f(v){var d=v.replace(/\D/g,"");if(d&&d[0]==="8")d="7"+d.slice(1);if(d&&d[0]!=="7")d="7"+d;d=d.slice(0,11);var r="+7";if(d.length>1)r+=" "+d.slice(1,4);if(d.length>=4)r+=" "+d.slice(4,7);if(d.length>=7)r+="-"+d.slice(7,9);if(d.length>=9)r+="-"+d.slice(9,11);return r;}ph.addEventListener("focus",function(){if(!ph.value)ph.value="+7 ";});ph.addEventListener("input",function(){ph.value=f(ph.value);});ph.addEventListener("blur",function(){if(ph.value.replace(/\D/g,"").length<=1)ph.value="";});})();
+["cName","cPhone","cAddr","cNote"].forEach(id=>{var _e=document.getElementById(id);if(_e)_e.addEventListener("input",buildLinks);});(function(){var ph=document.getElementById("cPhone");if(!ph)return;function f(v){var d=v.replace(/\D/g,"");if(d&&d[0]==="8")d="7"+d.slice(1);if(d&&d[0]!=="7")d="7"+d;d=d.slice(0,11);var r="+7";if(d.length>1)r+=" "+d.slice(1,4);if(d.length>=4)r+=" "+d.slice(4,7);if(d.length>=7)r+="-"+d.slice(7,9);if(d.length>=9)r+="-"+d.slice(9,11);return r;}ph.addEventListener("focus",function(){if(!ph.value)ph.value="+7 ";});ph.addEventListener("input",function(){ph.value=f(ph.value);});ph.addEventListener("blur",function(){if(ph.value.replace(/\D/g,"").length<=1)ph.value="";});})();
 function copyTxt(t){var d=false;try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);d=true;}}catch(e){}if(!d){try{var a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.position="fixed";a.style.top="-1000px";document.body.appendChild(a);a.focus();a.select();try{a.setSelectionRange(0,t.length);}catch(e){}document.execCommand("copy");document.body.removeChild(a);}catch(e){}}}
 function submitLead(){var phone=document.getElementById("cPhone").value.trim();var name=document.getElementById("cName").value.trim();if(!phone&&!name){toast("Укажите телефон или имя");var f=document.getElementById("cPhone");if(f)f.focus();return;}var msg=orderText();var btn=document.getElementById("bSend");var old=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="Отправляем…";}fetch("/api/public/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name,phone:phone,message:msg,source:"Сайт R&T"})}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(){toast("Заявка отправлена! Мы свяжемся с вами");Object.keys(cart).forEach(function(k){delete cart[k];});updateBar();renderCart();setTimeout(showHome,800);}).catch(function(){copyTxt(orderText());toast("Не удалось отправить — заявка скопирована, позвоните или напишите нам");}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});}
 function sendVK(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(CONFIG.vk,"_blank");},450);}function sendTG(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open("https://t.me/MVildi","_blank");},450);}
@@ -414,62 +402,25 @@ function rtRenderPortfolio(items){
       }).join('')+'</div>';
 }
 function rtRenderFaq(items){
-  var rtEl=document.getElementById("rtFaq");
-  var lpEl=document.getElementById("lpFaqBlock");
-  if(!items||!items.length){
-    if(rtEl)rtEl.style.display="none";
-    if(lpEl)lpEl.innerHTML='<p style="color:var(--muted);font-size:14px">Вопросы не добавлены</p>';
-    return;
-  }
-  var faqHtml=items.map(function(f){
-    return '<details style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:0">'
-      +'<summary style="font-weight:800;cursor:pointer;font-size:14px;color:var(--pine)">'+(f.question||'')+'</summary>'
-      +'<div style="font-size:13.5px;color:#48544d;margin-top:8px;line-height:1.5;padding-top:6px;border-top:1px solid var(--line)">'+(f.answer||'')+'</div>'
-      +'</details>';
-  }).join('');
-  if(lpEl){
-    lpEl.innerHTML='<h3 style="margin:0 0 14px;color:var(--pine);font-size:20px;font-weight:900">Частые вопросы</h3>'
-      +'<div style="display:flex;flex-direction:column;gap:8px">'+faqHtml+'</div>';
-  }
-  if(rtEl){rtEl.style.display="none";}
+  var el=document.getElementById("rtFaq"); if(!el)return;
+  if(!items||!items.length){el.style.display="none";return;}
+  el.style.display="";
+  el.innerHTML='<div class="home-h" style="margin-top:26px">Частые вопросы</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px">'
+    +items.map(function(f){
+        return '<details style="background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.06)">'
+          +'<summary style="font-weight:700;cursor:pointer;font-size:14px;color:#1f2d24">'+(f.question||'')+'</summary>'
+          +'<div style="font-size:13px;color:#445;margin-top:8px;line-height:1.5">'+(f.answer||'')+'</div>'
+          +'</details>';
+      }).join('')+'</div>';
 }
-(
-function rtApplySettings(s){
-  if(!s) return;
-  // Название и подзаголовок
-  if(s.site_name){
-    var el=document.getElementById('hName'); if(el) el.textContent=s.site_name;
-    var foot=document.getElementById('foot'); if(foot) foot.textContent=s.site_name+' · Доставка по России';
-    var dirTitle=document.getElementById('dirTitle'); if(dirTitle) dirTitle.textContent='Директор · '+s.site_name;
-  }
-  if(s.site_tagline){var el=document.getElementById('hSub'); if(el) el.textContent=s.site_tagline;}
-  // Телефон
-  if(s.phone){
-    var pd=s.phone.replace(/\D/g,'');
-    var fmt=pd.length>=11?'+7 '+pd.slice(1,4)+' '+pd.slice(4,7)+'-'+pd.slice(7,9)+'-'+pd.slice(9,11):s.phone;
-    var dp=document.getElementById('dirPhone'); if(dp) dp.textContent=fmt;
-    var hc=document.getElementById('hContact'); if(hc) hc.href='tel:'+s.phone;
-    var bc=document.getElementById('bCall'); if(bc) bc.href='tel:'+s.phone;
-  }
-  // ВКонтакте
-  var vk=document.getElementById('socVk');
-  if(vk&&s.vk){vk.href=s.vk; vk.style.display='';}
-  // Авито
-  var av=document.getElementById('socAv');
-  if(av&&s.avito){av.href=s.avito; av.style.display='';}
-  // Telegram
-  var tg=document.getElementById('socTg');
-  if(tg&&s.telegram){tg.href=s.telegram; tg.style.display='';}
-}
-
-function rtBoot(){
+(function rtBoot(){
   try{
     fetch("/api/public/products").then(function(r){return r.json();}).then(function(d){
       if(Array.isArray(d)&&d.length){CHAIRS=d;}
     }).catch(function(){});
     fetch("/api/public/config").then(function(r){return r.json();}).then(function(cfg){
       rtRenderPortfolio(cfg&&cfg.portfolio); rtRenderFaq(cfg&&cfg.faq);
-      rtApplySettings(cfg&&cfg.settings);
     }).catch(function(){});
   }catch(e){}
   showHome();
