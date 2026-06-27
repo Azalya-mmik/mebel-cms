@@ -195,7 +195,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
     </section>
 
     <div class="social-h lp-social">Мы тоже по мебели — заходите:</div>
-    <div class="social"><a class="soc vk" href="https://vk.ru/club140569973" target="_blank" rel="noopener"><span class="soc-i">VK</span>ВКонтакте</a><a class="soc av" href="https://www.avito.ru/user/4bfc13ef997d795e6d10c928bc5ade9f/profile?src=sharing" target="_blank" rel="noopener"><span class="soc-i">A</span>Авито</a><a class="soc tg" href="https://t.me/MVildi" target="_blank" rel="noopener"><span class="soc-i">TG</span>Telegram</a></div>
+    <div class="social"><a class="soc vk" id="socVk" href="#" target="_blank" rel="noopener" style="display:none"><span class="soc-i">VK</span>ВКонтакте</a><a class="soc av" id="socAv" href="#" target="_blank" rel="noopener" style="display:none"><span class="soc-i">A</span>Авито</a><a class="soc tg" id="socTg" href="#" target="_blank" rel="noopener" style="display:none"><span class="soc-i">TG</span>Telegram</a></div>
     <div id="rtWorks" class="rt-section" style="display:none"></div>
     <div id="rtFaq" class="rt-section" style="display:none"></div>
   </div>
@@ -433,13 +433,43 @@ function rtRenderFaq(items){
   }
   if(rtEl){rtEl.style.display="none";}
 }
-(function rtBoot(){
+(
+function rtApplySettings(s){
+  if(!s) return;
+  // Название и подзаголовок
+  if(s.site_name){
+    var el=document.getElementById('hName'); if(el) el.textContent=s.site_name;
+    var foot=document.getElementById('foot'); if(foot) foot.textContent=s.site_name+' · Доставка по России';
+    var dirTitle=document.getElementById('dirTitle'); if(dirTitle) dirTitle.textContent='Директор · '+s.site_name;
+  }
+  if(s.site_tagline){var el=document.getElementById('hSub'); if(el) el.textContent=s.site_tagline;}
+  // Телефон
+  if(s.phone){
+    var pd=s.phone.replace(/\D/g,'');
+    var fmt=pd.length>=11?'+7 '+pd.slice(1,4)+' '+pd.slice(4,7)+'-'+pd.slice(7,9)+'-'+pd.slice(9,11):s.phone;
+    var dp=document.getElementById('dirPhone'); if(dp) dp.textContent=fmt;
+    var hc=document.getElementById('hContact'); if(hc) hc.href='tel:'+s.phone;
+    var bc=document.getElementById('bCall'); if(bc) bc.href='tel:'+s.phone;
+  }
+  // ВКонтакте
+  var vk=document.getElementById('socVk');
+  if(vk&&s.vk){vk.href=s.vk; vk.style.display='';}
+  // Авито
+  var av=document.getElementById('socAv');
+  if(av&&s.avito){av.href=s.avito; av.style.display='';}
+  // Telegram
+  var tg=document.getElementById('socTg');
+  if(tg&&s.telegram){tg.href=s.telegram; tg.style.display='';}
+}
+
+function rtBoot(){
   try{
     fetch("/api/public/products").then(function(r){return r.json();}).then(function(d){
       if(Array.isArray(d)&&d.length){CHAIRS=d;}
     }).catch(function(){});
     fetch("/api/public/config").then(function(r){return r.json();}).then(function(cfg){
       rtRenderPortfolio(cfg&&cfg.portfolio); rtRenderFaq(cfg&&cfg.faq);
+      rtApplySettings(cfg&&cfg.settings);
     }).catch(function(){});
   }catch(e){}
   showHome();
