@@ -140,6 +140,7 @@ function initDb() {
     ['vk', 'https://vk.com/im?sel=-140569973'],
     ['telegram', ''],
     ['whatsapp', ''],
+    ['avito', ''],
     ['site_name', 'R&T Мебель'],
     ['site_tagline', 'Доставка по России'],
     ['banner_active', '0'],
