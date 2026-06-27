@@ -172,6 +172,19 @@ function initDb() {
     insertCalc.run(id, label, value);
   }
 
+  // Стартовые вопросы FAQ (добавляются один раз, если таблица пуста)
+  const faqCount = db.prepare('SELECT COUNT(*) as c FROM faq').get();
+  if (faqCount.c === 0) {
+    const insFaq = db.prepare('INSERT INTO faq (question, answer, sort_order, active) VALUES (?, ?, ?, 1)');
+    [
+      ['Сколько изготавливается мебель?', 'В среднем 14–30 дней — зависит от модели, комплектации и загруженности производства.', 1],
+      ['Можно изменить размеры?', 'Да, мы изготавливаем мебель по вашим индивидуальным размерам.', 2],
+      ['Можно выбрать ткань?', 'Да, есть более 50 вариантов тканей и цветов под любой интерьер.', 3],
+      ['Есть доставка?', 'Да, организуем доставку по РТ и заранее согласуем удобную дату.', 4],
+      ['Как оформить заказ?', 'Оставьте заявку — мы свяжемся, уточним детали и подготовим расчёт без обязательств.', 5],
+    ].forEach(([q, a, o]) => insFaq.run(q, a, o));
+  }
+
   // ── Каталог: расширяем таблицу products нужными полями (миграция) ──
   const cols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
   const addCol = (name, def) => { if (!cols.includes(name)) db.exec(`ALTER TABLE products ADD COLUMN ${name} ${def}`); };
