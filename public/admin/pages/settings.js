@@ -19,6 +19,7 @@ $('content').innerHTML = `
         <div class="form-group"><label>ВКонтакте (ссылка)</label><input type="text" id="s-vk" placeholder="https://vk.com/..."></div>
         <div class="form-group"><label>Telegram (ссылка)</label><input type="text" id="s-telegram" placeholder="https://t.me/..."></div>
         <div class="form-group"><label>WhatsApp (номер)</label><input type="text" id="s-whatsapp" placeholder="+7..."></div>
+        <div class="form-group"><label>Авито (ссылка)</label><input type="text" id="s-avito" placeholder="https://www.avito.ru/..."></div>
         <button class="btn btn-primary" onclick="saveSection('social')">💾 Сохранить</button>
       </div>
     </div>
@@ -59,7 +60,7 @@ $('content').innerHTML = `
 async function loadSettings() {
   try {
     const s = await api('GET', '/api/settings');
-    const fields = ['phone', 'email', 'address', 'vk', 'telegram', 'whatsapp', 'site_name', 'site_tagline', 'banner_title', 'banner_text'];
+    const fields = ['phone', 'email', 'address', 'vk', 'telegram', 'whatsapp', 'avito', 'site_name', 'site_tagline', 'banner_title', 'banner_text'];
     fields.forEach(key => {
       const el = $(`s-${key}`);
       if (el) el.value = s[key] || '';
@@ -81,7 +82,7 @@ async function saveSection(section) {
   const data = {};
   const sectionFields = {
     contact: ['phone', 'email', 'address'],
-    social: ['vk', 'telegram', 'whatsapp'],
+    social: ['vk', 'telegram', 'whatsapp', 'avito'],
     site: ['site_name', 'site_tagline'],
     banner: ['banner_title', 'banner_text', 'banner_active']
   };
