@@ -25,8 +25,8 @@ for (const d of [path.join(DATA_DIR, 'db'), path.join(DATA_DIR, 'public', 'uploa
   try { fs.mkdirSync(d, { recursive: true }); } catch (e) {}
 }
 
-// За обратным прокси Timeweb — чтобы IP определялись верно
-// trust proxy НЕ включаем глобально, чтобы не было редиректа HTTP→HTTPS без SSL
+// За обратным прокси Timeweb (HTTPS) — чтобы куки и IP определялись верно
+app.set('trust proxy', 1);
 
 // ─── MIDDLEWARE ────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -40,11 +40,13 @@ app.use(fileUpload({
 
 // Сессии
 app.use(session({
+  // Хранилище сессий — в памяти (после редеплоя нужно заново войти в /admin).
+  // Так нет нативной зависимости sqlite3 → сборка на App Platform не падает.
   secret: process.env.SESSION_SECRET || 'fallback_secret_change_me',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // SSL не подключён — куки работают по HTTP
+    secure: process.env.NODE_ENV === 'production', // HTTPS на проде
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 дней
   }
