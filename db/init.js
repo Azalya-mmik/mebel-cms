@@ -142,7 +142,7 @@ function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Использования промокодов (привязываются к заявке)
+    -- Использования промокодов
     CREATE TABLE IF NOT EXISTS promo_usages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       promo_id INTEGER NOT NULL REFERENCES promo_codes(id),
