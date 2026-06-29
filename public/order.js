@@ -1,169 +1,224 @@
-// Leads page
-let allLeads = [];
-
-$('pageActions').innerHTML = `
-  <a href="/api/leads/export" class="btn btn-ghost">📥 Экспорт CSV</a>
-`;
-
-$('content').innerHTML = `
-  <div class="filter-bar">
-    <input type="text" id="searchLead" placeholder="🔍 Поиск по имени/телефону..." oninput="filterLeads()">
-    <select id="statusFilter" onchange="filterLeads()">
-      <option value="">Все статусы</option>
-      <option value="new">Новые</option>
-      <option value="working">В работе</option>
-      <option value="done">Выполнена</option>
-      <option value="rejected">Отклонена</option>
-    </select>
-    <input type="date" id="fromDate" onchange="filterLeads()" title="С даты">
-    <input type="date" id="toDate" onchange="filterLeads()" title="По дату">
-    <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Сбросить</button>
-  </div>
-  <div class="card">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th><th>Имя</th><th>Телефон</th><th>Сообщение</th>
-            <th>Статус</th><th>Дата</th><th>Действия</th>
-          </tr>
-        </thead>
-        <tbody id="leadsBody"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Загрузка...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Lead detail modal -->
-  <div class="modal-overlay" id="leadModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Заявка #<span id="ldId"></span></h3>
-        <button class="modal-close" onclick="closeModal('leadModal')">✕</button>
-      </div>
-      <div class="modal-body" id="leadDetail"></div>
-      <div class="modal-footer">
-        <select id="ldStatus" style="width:auto;flex:1">
-          <option value="new">Новая</option>
-          <option value="working">В работе</option>
-          <option value="done">Выполнена</option>
-          <option value="rejected">Отклонена</option>
-        </select>
-        <button class="btn btn-primary" onclick="updateLeadStatus()">Сохранить</button>
-        <button class="btn btn-danger" onclick="deleteLead()">Удалить</button>
-      </div>
-    </div>
-  </div>
-`;
-
-async function loadLeads() {
-  try {
-    const data = await api('GET', '/api/leads?limit=500');
-    allLeads = data.leads;
-    filterLeads();
-  } catch(e) {
-    $('leadsBody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Ошибка: ${e.message}</td></tr>`;
+(function() {
+  function waitFor(fn, cb) {
+    if (fn()) cb(); else setTimeout(function(){ waitFor(fn, cb); }, 200);
   }
-}
 
-function filterLeads() {
-  const q = $('searchLead').value.toLowerCase();
-  const status = $('statusFilter').value;
-  const from = $('fromDate').value;
-  const to = $('toDate').value;
+  // Состояние промокода
+  var promoState = { valid: false, code: '', discount_pct: 0, partner_name: '' };
 
-  const filtered = allLeads.filter(l => {
-    if (q && !((l.name || '').toLowerCase().includes(q) || l.phone.includes(q))) return false;
-    if (status && l.status !== status) return false;
-    if (from && l.created_at.split('T')[0] < from) return false;
-    if (to && l.created_at.split('T')[0] > to) return false;
-    return true;
-  });
+  function addOrderButton() {
+    var cartSummary = document.getElementById('cartSummary');
+    if (!cartSummary || document.getElementById('mebelOrderBtn')) return;
 
-  renderLeads(filtered);
-}
+    // Скрываем старые кнопки отправки
+    var btns = cartSummary.querySelectorAll('button');
+    btns.forEach(function(b) {
+      var t = b.textContent || '';
+      if (t.indexOf('ВКонтакте') > -1 || t.indexOf('Telegram') > -1 ||
+          t.indexOf('MAX') > -1 || t.indexOf('SMS') > -1 ||
+          t.indexOf('Скопировать') > -1 || t.indexOf('Скопируй') > -1) {
+        b.style.display = 'none';
+      }
+    });
 
-function clearFilters() {
-  $('searchLead').value = '';
-  $('statusFilter').value = '';
-  $('fromDate').value = '';
-  $('toDate').value = '';
-  filterLeads();
-}
+    // ─── Блок промокода ─────────────────────────────────────────────────────
+    var promoBlock = document.createElement('div');
+    promoBlock.id = 'promoBlock';
+    promoBlock.style.cssText = 'margin-top:12px';
+    promoBlock.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<input id="promoInput" type="text" placeholder="Промокод (если есть)" ' +
+          'style="flex:1;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;' +
+          'font-family:inherit;font-size:14px;font-weight:600;text-transform:uppercase;outline:none">' +
+        '<button id="promoApplyBtn" onclick="applyPromo()" ' +
+          'style="padding:11px 16px;background:#21372F;color:#fff;border:none;border-radius:10px;' +
+          'font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">' +
+          'Применить</button>' +
+      '</div>' +
+      '<div id="promoMsg" style="margin-top:6px;font-size:13px;font-weight:600;display:none"></div>';
 
-function renderLeads(leads) {
-  if (!leads.length) {
-    $('leadsBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Заявок не найдено</td></tr>';
-    return;
+    // ─── Кнопка отправки ─────────────────────────────────────────────────────
+    var btn = document.createElement('button');
+    btn.id = 'mebelOrderBtn';
+    btn.textContent = '✅ Отправить заявку';
+    btn.style.cssText = 'width:100%;border:none;cursor:pointer;font-family:inherit;' +
+      'background:#21372F;color:#fff;font-weight:800;font-size:16px;' +
+      'padding:15px;border-radius:14px;margin-top:10px;display:block';
+
+    btn.onclick = function() {
+      var nameEl  = document.getElementById('cName');
+      var phoneEl = document.getElementById('cPhone');
+      var addrEl  = document.getElementById('cAddr');
+      var noteEl  = document.getElementById('cNote');
+
+      var name  = nameEl  ? nameEl.value.trim()  : '';
+      var phone = phoneEl ? phoneEl.value.trim()  : '';
+      var addr  = addrEl  ? addrEl.value.trim()  : '';
+      var note  = noteEl  ? noteEl.value.trim()  : '';
+
+      if (!phone || phone.replace(/\D/g,'').length < 10) {
+        if (typeof toast === 'function') toast('Введите телефон');
+        else alert('Введите телефон');
+        return;
+      }
+
+      btn.textContent = '⏳ Отправляем...';
+      btn.disabled = true;
+
+      // Собираем текст заказа и считаем сумму
+      var orderText = '';
+      var orderAmount = 0;
+      var productNames = [];
+      if (typeof entries === 'function') {
+        entries().forEach(function(e) {
+          orderText += e.name + ' × ' + e.qty;
+          if (e.price) {
+            var lineTotal = e.qty * e.price;
+            orderText += ' = ' + lineTotal + ' ₽';
+            orderAmount += lineTotal;
+          }
+          orderText += '; ';
+          productNames.push(e.name);
+        });
+      }
+
+      // Применяем скидку промокода к итоговой сумме
+      if (promoState.valid && promoState.discount_pct > 0) {
+        var discount = Math.round(orderAmount * promoState.discount_pct / 100);
+        orderText += ' [Скидка ' + promoState.discount_pct + '% по промокоду ' + promoState.code + ': −' + discount + ' ₽]';
+        orderAmount = orderAmount - discount;
+      }
+
+      var payload = {
+        name: name || 'Не указано',
+        phone: phone,
+        message: ('Заказ: ' + orderText +
+          (addr ? ' Адрес: ' + addr : '') +
+          (note ? ' Комментарий: ' + note : '')).trim(),
+        source: 'site'
+      };
+
+      // Добавляем данные промокода если применён
+      if (promoState.valid) {
+        payload.promo_code    = promoState.code;
+        payload.order_amount  = orderAmount;
+        payload.product_name  = productNames.join(', ');
+      }
+
+      fetch('/api/public/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        // Очищаем корзину
+        if (typeof cart !== 'undefined') {
+          Object.keys(cart).forEach(function(k) { delete cart[k]; });
+        }
+        if (typeof updateBar === 'function') updateBar();
+
+        // Показываем успех
+        var list = document.getElementById('cartList');
+        if (list) {
+          list.innerHTML = '<div style="text-align:center;padding:50px 20px">' +
+            '<div style="font-size:56px">✅</div>' +
+            '<div style="font-weight:800;font-size:22px;margin-top:14px;color:#21372F">Заявка принята!</div>' +
+            '<div style="color:#6E7C72;margin-top:10px;font-size:15px">Мы свяжемся с вами<br>в ближайшее время</div>' +
+            '</div>';
+        }
+        cartSummary.style.display = 'none';
+        if (typeof toast === 'function') toast('Заявка отправлена! 🎉');
+      })
+      .catch(function() {
+        btn.textContent = '✅ Отправить заявку';
+        btn.disabled = false;
+        if (typeof toast === 'function') toast('Ошибка. Попробуйте ещё раз');
+        else alert('Ошибка. Попробуйте ещё раз');
+      });
+    };
+
+    // Добавляем блок промокода и кнопку
+    cartSummary.appendChild(promoBlock);
+    cartSummary.appendChild(btn);
   }
-  $('leadsBody').innerHTML = leads.map(l => `
-    <tr style="cursor:pointer" onclick="openLead(${l.id})">
-      <td style="color:var(--text-muted);font-size:12px">#${l.id}</td>
-      <td><strong>${l.name || '—'}</strong></td>
-      <td><a href="tel:${l.phone}" onclick="event.stopPropagation()">${l.phone}</a></td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:13px">
-        ${l.message || '—'}
-      </td>
-      <td>${badge(l.status)}</td>
-      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">${fmtDate(l.created_at)}</td>
-      <td>
-        <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
-          <button class="btn btn-ghost btn-sm" onclick="quickStatus(${l.id},'working')">В работе</button>
-          <button class="btn btn-success btn-sm" onclick="quickStatus(${l.id},'done')">✓</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
 
-let currentLeadId = null;
+  // ─── Применить промокод ───────────────────────────────────────────────────
+  window.applyPromo = function() {
+    var input = document.getElementById('promoInput');
+    var msg   = document.getElementById('promoMsg');
+    var applyBtn = document.getElementById('promoApplyBtn');
+    var code  = (input ? input.value.trim().toUpperCase() : '');
+    if (!code) return;
 
-function openLead(id) {
-  const l = allLeads.find(x => x.id === id);
-  if (!l) return;
-  currentLeadId = id;
-  $('ldId').textContent = id;
-  $('ldStatus').value = l.status;
-  $('leadDetail').innerHTML = `
-    <div style="display:grid;gap:12px">
-      <div class="form-row">
-        <div><label>Имя</label><p style="font-weight:700">${l.name || '—'}</p></div>
-        <div><label>Телефон</label><p><a href="tel:${l.phone}" style="font-weight:700;color:var(--accent)">${l.phone}</a></p></div>
-      </div>
-      <div><label>Сообщение</label><p style="background:var(--bg);padding:10px;border-radius:8px">${l.message || '—'}</p></div>
-      <div class="form-row">
-        <div><label>Источник</label><p>${l.source || 'site'}</p></div>
-        <div><label>Дата</label><p>${fmtDate(l.created_at)}</p></div>
-      </div>
-    </div>
-  `;
-  openModal('leadModal');
-}
+    // Если уже применён — сбросить
+    if (promoState.valid) {
+      promoState = { valid: false, code: '', discount_pct: 0, partner_name: '' };
+      if (input) { input.value = ''; input.disabled = false; input.style.borderColor = '#e2e8f0'; }
+      if (msg)   { msg.style.display = 'none'; }
+      if (applyBtn) applyBtn.textContent = 'Применить';
+      updatePromoDisplay();
+      return;
+    }
 
-async function updateLeadStatus() {
-  try {
-    await api('PUT', `/api/leads/${currentLeadId}/status`, { status: $('ldStatus').value });
-    toast('Статус обновлён', 'success');
-    closeModal('leadModal');
-    loadLeads();
-  } catch(e) { toast(e.message, 'error'); }
-}
+    if (applyBtn) applyBtn.textContent = '⏳';
+    fetch('/api/public/promo/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (applyBtn) applyBtn.textContent = 'Убрать';
+      if (data.valid) {
+        promoState = { valid: true, code: code, discount_pct: data.discount_pct, partner_name: data.partner_name };
+        if (input) { input.disabled = true; input.style.borderColor = '#38a169'; }
+        if (msg) {
+          msg.style.display = 'block';
+          msg.style.color = '#276749';
+          msg.textContent = '✅ Промокод применён — скидка ' + data.discount_pct + '%';
+        }
+      } else {
+        promoState = { valid: false, code: '', discount_pct: 0, partner_name: '' };
+        if (applyBtn) applyBtn.textContent = 'Применить';
+        if (input) input.style.borderColor = '#e53e3e';
+        if (msg) {
+          msg.style.display = 'block';
+          msg.style.color = '#c53030';
+          msg.textContent = '❌ Промокод не найден или неактивен';
+        }
+      }
+      updatePromoDisplay();
+    })
+    .catch(function() {
+      if (applyBtn) applyBtn.textContent = 'Применить';
+      if (msg) { msg.style.display = 'block'; msg.style.color = '#c53030'; msg.textContent = 'Ошибка проверки промокода'; }
+    });
+  };
 
-async function quickStatus(id, status) {
-  try {
-    await api('PUT', `/api/leads/${id}/status`, { status });
-    toast('Статус обновлён', 'success');
-    loadLeads();
-  } catch(e) { toast(e.message, 'error'); }
-}
+  // Пересчитать итог в корзине с учётом скидки
+  function updatePromoDisplay() {
+    var totalEl = document.getElementById('cartTotal');
+    if (!totalEl) return;
+    var baseText = totalEl.getAttribute('data-base') || totalEl.textContent;
+    totalEl.setAttribute('data-base', baseText);
+    var baseAmount = parseInt(baseText.replace(/\D/g, '')) || 0;
+    if (promoState.valid && promoState.discount_pct > 0 && baseAmount > 0) {
+      var discount = Math.round(baseAmount * promoState.discount_pct / 100);
+      var newTotal = baseAmount - discount;
+      totalEl.innerHTML =
+        '<span style="text-decoration:line-through;color:#a0aec0;font-size:14px">' + baseAmount.toLocaleString('ru-RU') + ' ₽</span> ' +
+        '<span style="color:#38a169">' + newTotal.toLocaleString('ru-RU') + ' ₽</span>' +
+        '<span style="font-size:11px;color:#38a169;margin-left:4px">−' + discount.toLocaleString('ru-RU') + ' ₽</span>';
+    } else {
+      totalEl.textContent = baseText;
+    }
+  }
 
-async function deleteLead() {
-  if (!confirm('Удалить заявку?')) return;
-  try {
-    await api('DELETE', `/api/leads/${currentLeadId}`);
-    toast('Заявка удалена');
-    closeModal('leadModal');
-    loadLeads();
-  } catch(e) { toast(e.message, 'error'); }
-}
+  // Следим за появлением корзины
+  var observer = new MutationObserver(function() { addOrderButton(); });
+  observer.observe(document.body, { childList: true, subtree: true });
 
-loadLeads();
+  document.addEventListener('DOMContentLoaded', addOrderButton);
+  setTimeout(addOrderButton, 1000);
+})();
