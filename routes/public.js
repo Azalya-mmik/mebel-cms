@@ -57,8 +57,7 @@ router.get('/public/products', (req, res) => {
 router.post('/public/lead', (req, res) => {
   try {
     const db = getDb();
-    const { name, phone, message, source } = req.body || {};
-    // Достаточно телефона ИЛИ имени — не теряем контакт
+    const { name, phone, message, source, promo_code, order_amount, product_name } = req.body || {};
     if (!phone && !name) {
       return res.status(400).json({ error: 'Укажите телефон или имя' });
     }
@@ -66,10 +65,43 @@ router.post('/public/lead', (req, res) => {
       .prepare('INSERT INTO leads (name, phone, message, source) VALUES (?, ?, ?, ?)')
       .run(name || '', phone || '', message || '', source || 'Сайт R&T');
 
+    const leadId = result.lastInsertRowid;
+
+    // Если передан промокод — зафиксировать использование
+    let promoInfo = null;
+    if (promo_code) {
+      const promo = db.prepare("SELECT * FROM promo_codes WHERE upper(code)=upper(?) AND active=1").get(promo_code);
+      if (promo) {
+        const amount = parseInt(order_amount) || 0;
+        const reward = Math.round(amount * promo.discount_pct / 100);
+        db.prepare(
+          'INSERT INTO promo_usages (promo_id, lead_id, order_amount, reward_amount, product_name) VALUES (?, ?, ?, ?, ?)'
+        ).run(promo.id, leadId, amount, reward, product_name || '');
+        promoInfo = { partner: promo.partner_name, discount_pct: promo.discount_pct, reward };
+
+        // Уведомление партнёру в Telegram
+        sendTelegramNotify(promo, { product_name, amount, reward }).catch(() => {});
+      }
+    }
+
     sendLeadEmail({ name, phone, message }).catch(() => {});
-    res.json({ ok: true, id: result.lastInsertRowid });
+    res.json({ ok: true, id: leadId, promo: promoInfo });
   } catch (e) {
     res.status(500).json({ error: 'lead_error' });
+  }
+});
+
+// ─── ПРОВЕРКА ПРОМОКОДА ────────────────────────────────────────────────────────
+router.post('/public/promo/check', (req, res) => {
+  try {
+    const db = getDb();
+    const { code } = req.body || {};
+    if (!code) return res.status(400).json({ error: 'Не указан промокод' });
+    const promo = db.prepare("SELECT id, code, partner_name, discount_pct FROM promo_codes WHERE upper(code)=upper(?) AND active=1").get(code);
+    if (!promo) return res.json({ valid: false });
+    res.json({ valid: true, discount_pct: promo.discount_pct, partner_name: promo.partner_name });
+  } catch (e) {
+    res.status(500).json({ error: 'promo_error' });
   }
 });
 
@@ -102,6 +134,22 @@ async function sendLeadEmail({ name, phone, message }) {
     subject: '🪑 Новая заявка с сайта R&T Мебель',
     text: `Новая заявка!\n\nИмя: ${name || '—'}\nТелефон: ${phone || '—'}\n\n${message || ''}`,
     html: `<h2>Новая заявка с сайта R&T</h2><p><b>Имя:</b> ${name || '—'}</p><p><b>Телефон:</b> ${phone || '—'}</p><pre style="font:14px/1.5 system-ui;white-space:pre-wrap">${(message || '').replace(/</g, '&lt;')}</pre>`,
+  });
+}
+
+// Telegram-уведомление партнёру (если у промокода задан telegram_chat_id и задан TELEGRAM_BOT_TOKEN)
+async function sendTelegramNotify(promo, { product_name, amount, reward }) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = promo.telegram_chat_id;
+  if (!token || !chatId) return;
+  const product = product_name || 'товар';
+  const text =
+    `🎉 Марат должен вам за промокод *${promo.code}* по товару «${product}» — ` +
+    `${promo.discount_pct}% от суммы заказа = *${reward.toLocaleString('ru-RU')} ₽*`;
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
   });
 }
 
