@@ -119,6 +119,10 @@ app.get('/admin/log', requireAuth, (req, res) => {
   res.send(adminLayout('log'));
 });
 
+app.get('/admin/promos', requireAuth, (req, res) => {
+  res.send(adminLayout('promos'));
+});
+
 // ─── 404 ─────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
   if (req.path.startsWith('/api')) {
@@ -152,6 +156,7 @@ function adminLayout(page) {
     calculator: { title: 'Калькулятор', icon: '🧮' },
     backup: { title: 'Бэкап', icon: '💾' },
     log: { title: 'Журнал действий', icon: '📝' },
+    promos: { title: 'Партнёры', icon: '🤝' },
   };
 
   const nav = Object.entries(pages).map(([key, info]) => `
