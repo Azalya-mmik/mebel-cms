@@ -26,7 +26,7 @@ for (const d of [path.join(DATA_DIR, 'db'), path.join(DATA_DIR, 'public', 'uploa
 }
 
 // За обратным прокси Timeweb (HTTPS) — чтобы куки и IP определялись верно
-
+app.set('trust proxy', 1);
 
 // ─── MIDDLEWARE ────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -115,12 +115,12 @@ app.get('/admin/calculator', requireAuth, (req, res) => {
   res.send(adminLayout('calculator'));
 });
 
-app.get('/admin/promos', requireAuth, (req, res) => {
-  res.send(adminLayout('promos'));
-});
-
 app.get('/admin/log', requireAuth, (req, res) => {
   res.send(adminLayout('log'));
+});
+
+app.get('/admin/promos', requireAuth, (req, res) => {
+  res.send(adminLayout('promos'));
 });
 
 // ─── 404 ─────────────────────────────────────────────────────────────────────
