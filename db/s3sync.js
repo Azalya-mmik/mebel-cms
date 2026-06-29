@@ -1,171 +1,270 @@
-// Синхронизация базы SQLite с объектным хранилищем S3 (Timeweb).
-// На старте — скачиваем актуальную базу из S3.
-// При изменениях (заявки, правки в админке) — выгружаем свежую копию обратно.
-// Если S3 не настроен или недоступен — приложение продолжает работать на локальной базе
-// (просто без сохранения между редеплоями). S3-ошибки никогда не роняют сервер.
-
-const fs = require('fs');
+const Database = require('better-sqlite3');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
 const DB_PATH = path.join(DATA_DIR, 'db', 'mebel.db');
-const KEY = process.env.S3_DB_KEY || 'db/mebel.db';
 
-let enabled = false;
-let client = null;
-let bucket = null;
-let dirty = false;
-let uploading = false;
-let getDbRef = null;
-let debounce = null;
+let db;
 
-function init() {
-  const ak = process.env.S3_ACCESS_KEY;
-  const sk = process.env.S3_SECRET_KEY;
-  bucket = process.env.S3_BUCKET || 'rt-mebel';
-  if (!ak || !sk) {
-    console.warn('⚠️  S3 не настроен (нет ключей) — база только локальная, при редеплое сбросится.');
-    return false;
+function getDb() {
+  if (!db) {
+    try { require('fs').mkdirSync(path.dirname(DB_PATH), { recursive: true }); } catch (e) {}
+    db = new Database(DB_PATH);
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
   }
-  const { S3Client } = require('@aws-sdk/client-s3');
-  client = new S3Client({
-    region: process.env.S3_REGION || 'ru-1',
-    endpoint: process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru',
-    credentials: { accessKeyId: ak, secretAccessKey: sk },
-    forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false',
-  });
-  enabled = true;
-  return true;
+  return db;
 }
 
-function streamToBuffer(stream) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on('data', (c) => chunks.push(c));
-    stream.on('end', () => resolve(Buffer.concat(chunks)));
-    stream.on('error', reject);
-  });
-}
+function initDb() {
+  const db = getDb();
 
-// Скачать базу из S3 ДО открытия её приложением
-async function restoreOnBoot() {
-  if (!init()) return;
-  try {
-    const { GetObjectCommand } = require('@aws-sdk/client-s3');
-    const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: KEY }));
-    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    for (const ext of ['-wal', '-shm']) { try { fs.unlinkSync(DB_PATH + ext); } catch (e) {} }
-    const bytes = await streamToBuffer(res.Body);
-    fs.writeFileSync(DB_PATH, bytes);
-    console.log('✅ База восстановлена из S3 (' + bytes.length + ' байт)');
-  } catch (e) {
-    const code = e && (e.name || e.Code);
-    if (code === 'NoSuchKey' || (e && e.$metadata && e.$metadata.httpStatusCode === 404)) {
-      console.log('ℹ️  В S3 ещё нет резервной базы — стартуем с чистой, выгрузим после первых изменений.');
-    } else {
-      console.warn('⚠️  Не удалось скачать базу из S3:', code || (e && e.message));
+  db.exec(`
+    -- Товары каталога
+    CREATE TABLE IF NOT EXISTS products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      price INTEGER DEFAULT 0,
+      category TEXT DEFAULT 'other',
+      status TEXT DEFAULT 'available',
+      image TEXT,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Заявки от клиентов
+    CREATE TABLE IF NOT EXISTS leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      phone TEXT,
+      message TEXT,
+      status TEXT DEFAULT 'new',
+      source TEXT DEFAULT 'site',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Статистика посещений
+    CREATE TABLE IF NOT EXISTS visits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page TEXT,
+      ip TEXT,
+      user_agent TEXT,
+      device TEXT DEFAULT 'desktop',
+      referer TEXT,
+      session_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Настройки сайта
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Отзывы клиентов
+    CREATE TABLE IF NOT EXISTS reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      author TEXT NOT NULL,
+      text TEXT NOT NULL,
+      rating INTEGER DEFAULT 5,
+      status TEXT DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Портфолио
+    CREATE TABLE IF NOT EXISTS portfolio (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      image TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- FAQ
+    CREATE TABLE IF NOT EXISTS faq (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1
+    );
+
+    -- Акции/баннеры
+    CREATE TABLE IF NOT EXISTS banners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      text TEXT,
+      discount TEXT,
+      active INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- SEO настройки
+    CREATE TABLE IF NOT EXISTS seo (
+      page TEXT PRIMARY KEY,
+      title TEXT,
+      description TEXT,
+      keywords TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Лог действий администратора
+    CREATE TABLE IF NOT EXISTS admin_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      details TEXT,
+      ip TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Калькулятор (коэффициенты цен)
+    CREATE TABLE IF NOT EXISTS calculator (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      value REAL DEFAULT 1.0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Партнёрские промокоды
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      partner_name TEXT NOT NULL,
+      discount_pct REAL NOT NULL DEFAULT 3,
+      active INTEGER NOT NULL DEFAULT 1,
+      telegram_chat_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Использования промокодов (привязываются к заявке)
+    CREATE TABLE IF NOT EXISTS promo_usages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      promo_id INTEGER NOT NULL REFERENCES promo_codes(id),
+      lead_id INTEGER NOT NULL REFERENCES leads(id),
+      order_amount INTEGER NOT NULL DEFAULT 0,
+      reward_amount REAL NOT NULL DEFAULT 0,
+      product_name TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Начальные настройки
+  const defaults = [
+    ['phone', '+79274085023'],
+    ['address', ''],
+    ['email', ''],
+    ['vk', 'https://vk.com/im?sel=-140569973'],
+    ['telegram', ''],
+    ['whatsapp', ''],
+    ['avito', ''],
+    ['site_name', 'R&T Мебель'],
+    ['site_tagline', 'Доставка по России'],
+    ['banner_active', '0'],
+    ['banner_title', 'Акция!'],
+    ['banner_text', ''],
+  ];
+
+  const insertSetting = db.prepare(
+    'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'
+  );
+  for (const [k, v] of defaults) {
+    insertSetting.run(k, v);
+  }
+
+  // Начальные коэффициенты калькулятора
+  const calcDefaults = [
+    ['base_price', 'Базовая цена за м²', 5000],
+    ['coef_oak', 'Коэф. дуб', 1.8],
+    ['coef_pine', 'Коэф. сосна', 1.0],
+    ['coef_mdf', 'Коэф. МДФ', 0.7],
+    ['coef_premium', 'Коэф. премиум фурнитура', 1.3],
+    ['coef_standard', 'Коэф. стандарт фурнитура', 1.0],
+    ['delivery_base', 'Базовая стоимость доставки', 1500],
+  ];
+
+  const insertCalc = db.prepare(
+    'INSERT OR IGNORE INTO calculator (id, label, value) VALUES (?, ?, ?)'
+  );
+  for (const [id, label, value] of calcDefaults) {
+    insertCalc.run(id, label, value);
+  }
+
+  // Стартовые вопросы FAQ (добавляются один раз, если таблица пуста)
+  const faqCount = db.prepare('SELECT COUNT(*) as c FROM faq').get();
+  if (faqCount.c === 0) {
+    const insFaq = db.prepare('INSERT INTO faq (question, answer, sort_order, active) VALUES (?, ?, ?, 1)');
+    [
+      ['Сколько изготавливается мебель?', 'В среднем 14–30 дней — зависит от модели, комплектации и загруженности производства.', 1],
+      ['Можно изменить размеры?', 'Да, мы изготавливаем мебель по вашим индивидуальным размерам.', 2],
+      ['Можно выбрать ткань?', 'Да, есть более 50 вариантов тканей и цветов под любой интерьер.', 3],
+      ['Есть доставка?', 'Да, организуем доставку по РТ и заранее согласуем удобную дату.', 4],
+      ['Как оформить заказ?', 'Оставьте заявку — мы свяжемся, уточним детали и подготовим расчёт без обязательств.', 5],
+    ].forEach(([q, a, o]) => insFaq.run(q, a, o));
+  }
+
+  // ── Каталог: расширяем таблицу products нужными полями (миграция) ──
+  const cols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
+  const addCol = (name, def) => { if (!cols.includes(name)) db.exec(`ALTER TABLE products ADD COLUMN ${name} ${def}`); };
+  addCol('colors', 'TEXT');     // JSON-массив строк
+  addCol('specs', 'TEXT');      // JSON-массив строк
+  addCol('images', 'TEXT');     // JSON-массив data-URI/URL
+  addCol('cost_rot', 'INTEGER');// доп. цена (поворотный механизм и т.п.), может быть NULL
+
+  // ── Стартовый каталог R&T (15 товаров) — заливаем один раз ──
+  const catV = db.prepare("SELECT value FROM settings WHERE key='catalog_v'").get();
+  if (!catV || catV.value !== '2') {
+    let seed = [];
+    try { seed = require('./seed-catalog.json'); } catch (e) { seed = []; }
+    if (seed.length) {
+      db.exec('DELETE FROM products');
+      const ins = db.prepare(`INSERT INTO products
+        (name, description, price, category, status, image, images, specs, colors, cost_rot, sort_order)
+        VALUES (?, ?, ?, ?, 'available', ?, ?, ?, ?, ?, ?)`);
+      seed.forEach((p, idx) => {
+        const imgs = Array.isArray(p.imgs) ? p.imgs : [];
+        ins.run(
+          p.name || '', p.description || '', parseInt(p.cost) || 0, p.type || 'Прочее',
+          imgs[0] || '', JSON.stringify(imgs),
+          JSON.stringify(p.specs || []), JSON.stringify(p.colors || []),
+          (p.costRot != null ? parseInt(p.costRot) : null), idx
+        );
+      });
     }
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('catalog_v', '2')").run();
+  }
+
+  // Пароль администратора берётся ТОЛЬКО из переменной окружения.
+  checkAdminPassword();
+
+  console.log('✅ База данных инициализирована');
+  return db;
+}
+
+function checkAdminPassword() {
+  if (!process.env.ADMIN_PASSWORD_HASH) {
+    console.warn('⚠️  ADMIN_PASSWORD_HASH не задан! Вход в админку работать не будет.');
+    console.warn('    Сгенерируй хеш локально:  node scripts/hash.js ТВОЙ_ПАРОЛЬ');
+    console.warn('    и добавь его в переменные окружения приложения на Timeweb.');
   }
 }
 
-function start(getDb) {
-  getDbRef = getDb;
-  if (!enabled) return;
-  setInterval(() => { if (dirty) upload(); }, 30000);
-  // авто-снимок раз в 6 часов (если были изменения)
-  setInterval(() => { createSnapshot('авто').catch(() => {}); }, 6 * 60 * 60 * 1000);
+function closeDb() {
+  if (db) { try { db.close(); } catch (e) {} db = null; }
 }
 
-function markDirty() {
-  if (!enabled) return;
-  dirty = true;
-  clearTimeout(debounce);
-  debounce = setTimeout(() => upload(), 3000);
+// Переоткрыть базу после восстановления файла из бэкапа
+function reopenDb() {
+  closeDb();
+  // подчистить WAL/SHM, чтобы открылся именно восстановленный файл
+  const fs = require('fs');
+  for (const ext of ['-wal', '-shm']) { try { fs.unlinkSync(DB_PATH + ext); } catch (e) {} }
+  initDb();
 }
 
-async function upload() {
-  if (!enabled || uploading) return;
-  uploading = true;
-  dirty = false;
-  try {
-    try { if (getDbRef) getDbRef().pragma('wal_checkpoint(TRUNCATE)'); } catch (e) {}
-    const body = fs.readFileSync(DB_PATH);
-    const { PutObjectCommand } = require('@aws-sdk/client-s3');
-    await client.send(new PutObjectCommand({
-      Bucket: bucket, Key: KEY, Body: body, ContentType: 'application/octet-stream',
-    }));
-  } catch (e) {
-    console.warn('⚠️  Не удалось выгрузить базу в S3:', e && (e.name || e.message));
-    dirty = true;
-  } finally {
-    uploading = false;
-  }
-}
-
-const SNAP_PREFIX = 'db/snapshots/';
-const SNAP_KEEP = 20;
-
-function isEnabled() { return enabled; }
-
-// Создать снимок (бэкап) текущей базы
-async function createSnapshot(label) {
-  if (!enabled) throw new Error('S3 не настроен');
-  try { if (getDbRef) getDbRef().pragma('wal_checkpoint(TRUNCATE)'); } catch (e) {}
-  const { PutObjectCommand } = require('@aws-sdk/client-s3');
-  const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const key = SNAP_PREFIX + 'mebel-' + ts + '.db';
-  const body = fs.readFileSync(DB_PATH);
-  await client.send(new PutObjectCommand({
-    Bucket: bucket, Key: key, Body: body, ContentType: 'application/octet-stream',
-    Metadata: label ? { label: encodeURIComponent(label) } : undefined,
-  }));
-  await pruneSnapshots();
-  return { key, size: body.length };
-}
-
-// Список снимков
-async function listSnapshots() {
-  if (!enabled) return [];
-  const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
-  const out = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: SNAP_PREFIX }));
-  const items = (out.Contents || []).map(o => ({
-    key: o.Key,
-    size: o.Size,
-    date: o.LastModified ? new Date(o.LastModified).toISOString() : '',
-  }));
-  items.sort((a, b) => (a.date < b.date ? 1 : -1)); // новые сверху
-  return items;
-}
-
-async function pruneSnapshots() {
-  try {
-    const items = await listSnapshots();
-    if (items.length <= SNAP_KEEP) return;
-    const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
-    for (const old of items.slice(SNAP_KEEP)) {
-      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: old.key }));
-    }
-  } catch (e) {}
-}
-
-// Восстановить базу из снимка (откат)
-async function restoreSnapshot(key) {
-  if (!enabled) throw new Error('S3 не настроен');
-  if (!key || key.indexOf(SNAP_PREFIX) !== 0) throw new Error('Неверный снимок');
-  const { GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
-  const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
-  const bytes = await streamToBuffer(res.Body);
-  // переоткрыть базу с восстановленным файлом
-  const initMod = require('./init');
-  if (initMod.closeDb) initMod.closeDb();
-  fs.writeFileSync(DB_PATH, bytes);
-  if (initMod.reopenDb) initMod.reopenDb();
-  // сразу сделать восстановленное состояние «живым» в S3
-  await client.send(new PutObjectCommand({
-    Bucket: bucket, Key: KEY, Body: bytes, ContentType: 'application/octet-stream',
-  }));
-  dirty = false;
-  return { restored: bytes.length };
-}
-
-module.exports = { restoreOnBoot, start, markDirty, upload, isEnabled, createSnapshot, listSnapshots, restoreSnapshot };
+module.exports = { getDb, initDb, closeDb, reopenDb, DB_PATH };
