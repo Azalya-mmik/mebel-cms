@@ -199,7 +199,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
     </section>
 
     <div class="social-h lp-social">Мы тоже по мебели — заходите:</div>
-    <div class="social"><a class="soc vk" href="https://vk.ru/club140569973" target="_blank" rel="noopener"><span class="soc-i">VK</span>ВКонтакте</a><a class="soc av" href="https://www.avito.ru/user/4bfc13ef997d795e6d10c928bc5ade9f/profile?src=sharing" target="_blank" rel="noopener"><span class="soc-i">A</span>Авито</a><a class="soc tg" href="https://t.me/MVildi" target="_blank" rel="noopener"><span class="soc-i">TG</span>Telegram</a></div>
+    <div class="social" id="socialLinks"><a class="soc vk" id="socVk" href="https://vk.ru/club140569973" target="_blank" rel="noopener"><span class="soc-i">VK</span>ВКонтакте</a><a class="soc av" id="socAvito" href="https://www.avito.ru/user/4bfc13ef997d795e6d10c928bc5ade9f/profile?src=sharing" target="_blank" rel="noopener"><span class="soc-i">A</span>Авито</a><a class="soc tg" id="socTg" href="https://t.me/MVildi" target="_blank" rel="noopener"><span class="soc-i">TG</span>Telegram</a><a class="soc" id="socWa" style="display:none" target="_blank" rel="noopener"><span class="soc-i">WA</span>WhatsApp</a></div>
     <div id="rtWorks" class="rt-section" style="display:none"></div>
   </div>
   <div id="vChairs" style="display:none"><div class="count" id="count"></div><div class="delnote"><b>Доставка по РТ:</b> 200 ₽ за стул, от 4 стульев — бесплатно. Вместе с кроватью и/или матрасом — бесплатно.</div><div class="grid" id="grid"></div></div>
@@ -450,7 +450,7 @@ function attachPhoneMask(id){var ph=document.getElementById(id);if(!ph)return;fu
 attachPhoneMask("cPhone");attachPhoneMask("lPhone");
 function copyTxt(t){var d=false;try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);d=true;}}catch(e){}if(!d){try{var a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.position="fixed";a.style.top="-1000px";document.body.appendChild(a);a.focus();a.select();try{a.setSelectionRange(0,t.length);}catch(e){}document.execCommand("copy");document.body.removeChild(a);}catch(e){}}}
 function submitLead(){var phone=document.getElementById("cPhone").value.trim();var name=document.getElementById("cName").value.trim();if(!phone&&!name){toast("Укажите телефон или имя");var f=document.getElementById("cPhone");if(f)f.focus();return;}var msg=orderText();var btn=document.getElementById("bSend");var old=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="Отправляем…";}fetch("/api/public/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name,phone:phone,message:msg,source:"Сайт R&T"})}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(){toast("Заявка отправлена! Мы свяжемся с вами");Object.keys(cart).forEach(function(k){delete cart[k];});updateBar();renderCart();setTimeout(showHome,800);}).catch(function(){copyTxt(orderText());toast("Не удалось отправить — заявка скопирована, позвоните или напишите нам");}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});}
-function sendVK(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(CONFIG.vk,"_blank");},450);}function sendTG(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open("https://t.me/MVildi","_blank");},450);}
+function sendVK(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(CONFIG.vk,"_blank");},450);}function sendTG(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(CONFIG.telegram||"https://t.me/MVildi","_blank");},450);}
 function sendMAX(){var txt=orderText();copyTxt(txt);var u=CONFIG.max||"";if(u&&u.indexOf("ВАШ_")<0){toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(u,"_blank");},450);}else{toast("Заявка скопирована — откройте MAX и вставьте");}}
 function sendSMS(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — открываю SMS");setTimeout(function(){window.location.href="sms:"+CONFIG.phone+"?&body="+encodeURIComponent(txt);},350);}
 function copyOrder(){const txt=orderText();if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast("Заявка скопирована"),()=>fb(txt));else fb(txt);}
@@ -480,6 +480,16 @@ function rtRenderFaq(items){
       }).join('');
 }
 function rtEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function rtRenderSocial(settings){
+  if(!settings)return;
+  if(settings.vk){var a=document.getElementById("socVk");if(a)a.href=settings.vk;CONFIG.vk=settings.vk;}
+  if(settings.telegram){var t=document.getElementById("socTg");if(t)t.href=settings.telegram;CONFIG.telegram=settings.telegram;}
+  if(settings.avito){var av=document.getElementById("socAvito");if(av)av.href=settings.avito;}
+  if(settings.whatsapp){
+    var wa=document.getElementById("socWa");
+    if(wa){var digits=settings.whatsapp.replace(/\D/g,"");wa.href="https://wa.me/"+digits;wa.style.display="";}
+  }
+}
 function rtRenderReviews(items){
   var el=document.getElementById("lpReviewsList"); if(!el)return;
   if(!items||!items.length)return; // нет одобренных отзывов — оставляем дефолтные примеры
@@ -526,7 +536,7 @@ function submitReview(){
       if(Array.isArray(d)&&d.length){CHAIRS=d;}
     }).catch(function(){});
     fetch("/api/public/config").then(function(r){return r.json();}).then(function(cfg){
-      rtRenderPortfolio(cfg&&cfg.portfolio); rtRenderFaq(cfg&&cfg.faq); renderCategoryTiles(cfg&&cfg.categories); rtRenderReviews(cfg&&cfg.reviews);
+      rtRenderPortfolio(cfg&&cfg.portfolio); rtRenderFaq(cfg&&cfg.faq); renderCategoryTiles(cfg&&cfg.categories); rtRenderReviews(cfg&&cfg.reviews); rtRenderSocial(cfg&&cfg.settings);
     }).catch(function(){});
   }catch(e){}
   showHome();
