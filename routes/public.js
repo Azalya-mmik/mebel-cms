@@ -29,7 +29,17 @@ router.get('/public/config', (req, res) => {
       .prepare("SELECT author, text, rating, created_at FROM reviews WHERE status='approved' ORDER BY created_at DESC LIMIT 12")
       .all();
 
-    res.json({ settings, faq, portfolio, categories, reviews });
+    const calcRows = db.prepare("SELECT id, value FROM calculator").all();
+    const calc = {};
+    for (const r of calcRows) calc[r.id] = r.value;
+    const delivery = {
+      bed: calc.delivery_base != null ? calc.delivery_base : 1500,
+      chair: calc.chair_delivery != null ? calc.chair_delivery : 200,
+      chairFreeFrom: calc.chair_free_from != null ? calc.chair_free_from : 4,
+      banketka: calc.banketka_delivery != null ? calc.banketka_delivery : 300,
+    };
+
+    res.json({ settings, faq, portfolio, categories, reviews, delivery });
   } catch (e) {
     res.status(500).json({ error: 'config_error' });
   }
