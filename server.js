@@ -35,7 +35,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(fileUpload({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   createParentPath: true,
-  abortOnLimit: true
+  abortOnLimit: true,
+  multiples: true
 }));
 
 // Сессии
