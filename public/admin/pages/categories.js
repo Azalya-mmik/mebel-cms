@@ -38,6 +38,16 @@ $('content').innerHTML = `
             <option value="0">Нет, скрыть</option>
           </select>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Доставка за 1 шт, ₽</label>
+            <input type="number" id="catDeliveryPrice" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label>Бесплатно от, шт (пусто — никогда сама по себе)</label>
+            <input type="number" id="catDeliveryFreeFrom" placeholder="напр. 4" min="1">
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeModal('categoryModal')">Отмена</button>
@@ -69,6 +79,9 @@ function renderCategories() {
       <div class="product-body">
         <div class="product-name">${c.name}</div>
         <div>${c.active ? '<span style="background:#276749;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">Показана на сайте</span>' : '<span style="background:#718096;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">Скрыта</span>'}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">
+          ${c.delivery_price > 0 ? `Доставка: ${c.delivery_price} ₽/шт` : 'Доставка: бесплатно'}${c.delivery_free_from ? `, бесплатно от ${c.delivery_free_from} шт` : ''}
+        </div>
       </div>
       <div class="product-actions">
         <button class="btn btn-ghost btn-sm" title="Выше" ${i === 0 ? 'disabled' : ''} onclick="moveCategory(${c.id},-1)">↑</button>
@@ -86,6 +99,8 @@ function openAddCatModal() {
   $('catName').value = '';
   $('catActive').value = '1';
   $('catImgFile').value = '';
+  $('catDeliveryPrice').value = '';
+  $('catDeliveryFreeFrom').value = '';
   $('catImgPreview').innerHTML = '<div class="upload-icon">🗂️</div><p>Нажмите для загрузки</p>';
   openModal('categoryModal');
 }
@@ -98,6 +113,8 @@ function editCategory(id) {
   $('catName').value = c.name;
   $('catActive').value = String(c.active);
   $('catImgFile').value = '';
+  $('catDeliveryPrice').value = c.delivery_price || 0;
+  $('catDeliveryFreeFrom').value = (c.delivery_free_from != null ? c.delivery_free_from : '');
   $('catImgPreview').innerHTML = c.cover_image
     ? `<img src="${c.cover_image}" style="max-height:120px;border-radius:8px">`
     : '<div class="upload-icon">🗂️</div><p>Нажмите для загрузки</p>';
@@ -107,7 +124,12 @@ function editCategory(id) {
 async function saveCategory() {
   const name = $('catName').value.trim();
   if (!name) { toast('Введите название', 'error'); return; }
-  const data = { name, active: $('catActive').value === '1' };
+  const data = {
+    name,
+    active: $('catActive').value === '1',
+    delivery_price: $('catDeliveryPrice').value || 0,
+    delivery_free_from: $('catDeliveryFreeFrom').value,
+  };
   try {
     let id = editingCatId;
     if (editingCatId) {
@@ -115,7 +137,7 @@ async function saveCategory() {
       await api('PUT', `/api/categories/${editingCatId}`, { ...data, sort_order: existing ? existing.sort_order : 0 });
       toast('Категория обновлена', 'success');
     } else {
-      const res = await api('POST', '/api/categories', { name, sort_order: allCategories.length });
+      const res = await api('POST', '/api/categories', { ...data, sort_order: allCategories.length });
       id = res.id;
       toast('Категория добавлена', 'success');
     }
@@ -148,8 +170,8 @@ async function moveCategory(id, dir) {
   if (swapIdx < 0 || swapIdx >= allCategories.length) return;
   const a = allCategories[idx], b = allCategories[swapIdx];
   try {
-    await api('PUT', `/api/categories/${a.id}`, { name: a.name, active: !!a.active, sort_order: b.sort_order });
-    await api('PUT', `/api/categories/${b.id}`, { name: b.name, active: !!b.active, sort_order: a.sort_order });
+    await api('PUT', `/api/categories/${a.id}`, { name: a.name, active: !!a.active, sort_order: b.sort_order, delivery_price: a.delivery_price || 0, delivery_free_from: a.delivery_free_from });
+    await api('PUT', `/api/categories/${b.id}`, { name: b.name, active: !!b.active, sort_order: a.sort_order, delivery_price: b.delivery_price || 0, delivery_free_from: b.delivery_free_from });
     loadCategories();
   } catch (e) {
     toast(e.message, 'error');
