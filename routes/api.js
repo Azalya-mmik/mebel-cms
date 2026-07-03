@@ -114,28 +114,69 @@ router.delete('/products/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// Загрузка фото товара
+// Загрузка фото(-ий) товара — добавляются к уже существующим, не заменяют их
 router.post('/products/:id/image', (req, res) => {
   if (!req.files || !req.files.image) return res.status(400).json({ error: 'Нет файла' });
   const db = getDb();
-  const file = req.files.image;
-  const ext = path.extname(file.name).toLowerCase();
-  if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext))
-    return res.status(400).json({ error: 'Только JPG/PNG/WEBP' });
-
-  const filename = `product_${req.params.id}_${Date.now()}${ext}`;
+  const files = Array.isArray(req.files.image) ? req.files.image : [req.files.image];
   const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
-  const uploadPath = path.join(DATA_DIR, 'public', 'uploads', filename);
+  const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
 
-  file.mv(uploadPath, (err) => {
-    if (err) return res.status(500).json({ error: 'Ошибка загрузки' });
-    const imgUrl = `/uploads/${filename}`;
-    db.prepare('UPDATE products SET image=?, images=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
-      .run(imgUrl, JSON.stringify([imgUrl]), req.params.id);
-    logAction(db, 'product_image', `Загружено фото для товара ID ${req.params.id}`, req);
-    res.json({ url: imgUrl });
+  for (const f of files) {
+    if (!allowed.includes(path.extname(f.name).toLowerCase()))
+      return res.status(400).json({ error: 'Только JPG/PNG/WEBP' });
+  }
+
+  let done = 0, failed = false;
+  const newUrls = [];
+  files.forEach((file, i) => {
+    const ext = path.extname(file.name).toLowerCase();
+    const filename = `product_${req.params.id}_${Date.now()}_${i}${ext}`;
+    const uploadPath = path.join(DATA_DIR, 'public', 'uploads', filename);
+    file.mv(uploadPath, (err) => {
+      done++;
+      if (err) { failed = true; }
+      else newUrls.push(`/uploads/${filename}`);
+      if (done === files.length) {
+        if (failed && !newUrls.length) return res.status(500).json({ error: 'Ошибка загрузки' });
+        const product = db.prepare('SELECT images, image FROM products WHERE id=?').get(req.params.id);
+        let images = [];
+        try { const p = JSON.parse(product.images); if (Array.isArray(p)) images = p; } catch (e) {}
+        images = images.concat(newUrls);
+        db.prepare('UPDATE products SET image=?, images=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
+          .run(images[0], JSON.stringify(images), req.params.id);
+        logAction(db, 'product_image', `Загружено фото (${newUrls.length}) для товара ID ${req.params.id}`, req);
+        res.json({ url: newUrls[0], images });
+      }
+    });
   });
 });
+
+// Удалить фото товара / изменить порядок — принимает итоговый массив ссылок
+router.put('/products/:id/images', (req, res) => {
+  const db = getDb();
+  const { images } = req.body;
+  if (!Array.isArray(images)) return res.status(400).json({ error: 'Некорректные данные' });
+
+  const product = db.prepare('SELECT images FROM products WHERE id=?').get(req.params.id);
+  if (!product) return res.status(404).json({ error: 'Товар не найден' });
+
+  let oldImages = [];
+  try { const p = JSON.parse(product.images); if (Array.isArray(p)) oldImages = p; } catch (e) {}
+
+  // Удаляем с диска файлы, которых больше нет в новом списке
+  const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
+  oldImages.filter(u => !images.includes(u)).forEach(u => {
+    const filePath = path.join(DATA_DIR, 'public', u.replace(/^\//, ''));
+    try { fs.unlinkSync(filePath); } catch (e) {}
+  });
+
+  db.prepare('UPDATE products SET image=?, images=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
+    .run(images[0] || null, JSON.stringify(images), req.params.id);
+  logAction(db, 'product_images_update', `Изменён порядок/набор фото товара ID ${req.params.id}`, req);
+  res.json({ ok: true, images });
+});
+
 
 // ─── КАТЕГОРИИ КАТАЛОГА ────────────────────────────────────────────────────────
 // slug — для ссылки/адреса витрины на сайте, генерируется из названия
