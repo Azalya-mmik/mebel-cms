@@ -1,6 +1,31 @@
 // Категории каталога R&T
 let allCategories = [];
 let editingCatId = null;
+// Эти категории на сайте показаны одной общей витриной "Стулья" — их доставка настраивается
+// не здесь, а в разделе "Калькулятор" (там одна цифра на всех троих)
+const MERGED_CATS = ['Табуреты', 'Стулья', 'Прочее'];
+
+function renderCatDeliveryBlock(name) {
+  const block = $('catDeliveryBlock');
+  if (!block) return;
+  if (MERGED_CATS.includes(name)) {
+    block.innerHTML = `<p style="color:var(--text-muted);font-size:13px;background:var(--bg-soft,#f5f4f0);border-radius:10px;padding:10px 12px;margin-top:4px">
+      ℹ️ «Табуреты», «Стулья» и «Прочее» показаны на сайте одной витриной, поэтому доставка для них общая —
+      настройте её в разделе <a href="/admin/calculator">«Калькулятор»</a> («Доставка за 1 стул/табурет»).
+    </p>`;
+  } else {
+    block.innerHTML = `<div class="form-row">
+      <div class="form-group">
+        <label>Доставка за 1 шт, ₽</label>
+        <input type="number" id="catDeliveryPrice" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Бесплатно от, шт (пусто — никогда сама по себе)</label>
+        <input type="number" id="catDeliveryFreeFrom" placeholder="напр. 4" min="1">
+      </div>
+    </div>`;
+  }
+}
 
 $('pageActions').innerHTML = `
   <button class="btn btn-accent" onclick="openAddCatModal()">+ Добавить категорию</button>
@@ -38,16 +63,7 @@ $('content').innerHTML = `
             <option value="0">Нет, скрыть</option>
           </select>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Доставка за 1 шт, ₽</label>
-            <input type="number" id="catDeliveryPrice" placeholder="0" min="0">
-          </div>
-          <div class="form-group">
-            <label>Бесплатно от, шт (пусто — никогда сама по себе)</label>
-            <input type="number" id="catDeliveryFreeFrom" placeholder="напр. 4" min="1">
-          </div>
-        </div>
+        <div id="catDeliveryBlock"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeModal('categoryModal')">Отмена</button>
@@ -80,7 +96,9 @@ function renderCategories() {
         <div class="product-name">${c.name}</div>
         <div>${c.active ? '<span style="background:#276749;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">Показана на сайте</span>' : '<span style="background:#718096;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">Скрыта</span>'}</div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:6px">
-          ${c.delivery_price > 0 ? `Доставка: ${c.delivery_price} ₽/шт` : 'Доставка: бесплатно'}${c.delivery_free_from ? `, бесплатно от ${c.delivery_free_from} шт` : ''}
+          ${MERGED_CATS.includes(c.name)
+            ? 'Доставка: см. «Калькулятор»'
+            : (c.delivery_price > 0 ? `Доставка: ${c.delivery_price} ₽/шт` : 'Доставка: бесплатно') + (c.delivery_free_from ? `, бесплатно от ${c.delivery_free_from} шт` : '')}
         </div>
       </div>
       <div class="product-actions">
@@ -99,6 +117,7 @@ function openAddCatModal() {
   $('catName').value = '';
   $('catActive').value = '1';
   $('catImgFile').value = '';
+  renderCatDeliveryBlock('');
   $('catDeliveryPrice').value = '';
   $('catDeliveryFreeFrom').value = '';
   $('catImgPreview').innerHTML = '<div class="upload-icon">🗂️</div><p>Нажмите для загрузки</p>';
@@ -113,8 +132,9 @@ function editCategory(id) {
   $('catName').value = c.name;
   $('catActive').value = String(c.active);
   $('catImgFile').value = '';
-  $('catDeliveryPrice').value = c.delivery_price || 0;
-  $('catDeliveryFreeFrom').value = (c.delivery_free_from != null ? c.delivery_free_from : '');
+  renderCatDeliveryBlock(c.name);
+  if ($('catDeliveryPrice')) $('catDeliveryPrice').value = c.delivery_price || 0;
+  if ($('catDeliveryFreeFrom')) $('catDeliveryFreeFrom').value = (c.delivery_free_from != null ? c.delivery_free_from : '');
   $('catImgPreview').innerHTML = c.cover_image
     ? `<img src="${c.cover_image}" style="max-height:120px;border-radius:8px">`
     : '<div class="upload-icon">🗂️</div><p>Нажмите для загрузки</p>';
@@ -124,16 +144,17 @@ function editCategory(id) {
 async function saveCategory() {
   const name = $('catName').value.trim();
   if (!name) { toast('Введите название', 'error'); return; }
+  const existing = editingCatId ? allCategories.find(x => x.id === editingCatId) : null;
+  const hasDeliveryFields = !!$('catDeliveryPrice');
   const data = {
     name,
     active: $('catActive').value === '1',
-    delivery_price: $('catDeliveryPrice').value || 0,
-    delivery_free_from: $('catDeliveryFreeFrom').value,
+    delivery_price: hasDeliveryFields ? ($('catDeliveryPrice').value || 0) : (existing ? existing.delivery_price || 0 : 0),
+    delivery_free_from: hasDeliveryFields ? $('catDeliveryFreeFrom').value : (existing ? existing.delivery_free_from : ''),
   };
   try {
     let id = editingCatId;
     if (editingCatId) {
-      const existing = allCategories.find(x => x.id === editingCatId);
       await api('PUT', `/api/categories/${editingCatId}`, { ...data, sort_order: existing ? existing.sort_order : 0 });
       toast('Категория обновлена', 'success');
     } else {
