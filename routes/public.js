@@ -25,7 +25,11 @@ router.get('/public/config', (req, res) => {
       .prepare('SELECT name, slug, cover_image FROM categories WHERE active=1 ORDER BY sort_order, id')
       .all();
 
-    res.json({ settings, faq, portfolio, categories });
+    const reviews = db
+      .prepare("SELECT author, text, rating, created_at FROM reviews WHERE status='approved' ORDER BY created_at DESC LIMIT 12")
+      .all();
+
+    res.json({ settings, faq, portfolio, categories, reviews });
   } catch (e) {
     res.status(500).json({ error: 'config_error' });
   }
