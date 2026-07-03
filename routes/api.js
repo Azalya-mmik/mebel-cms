@@ -137,6 +137,93 @@ router.post('/products/:id/image', (req, res) => {
   });
 });
 
+// ─── КАТЕГОРИИ КАТАЛОГА ────────────────────────────────────────────────────────
+// slug — для ссылки/адреса витрины на сайте, генерируется из названия
+function slugify(name) {
+  const map = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya' };
+  const translit = String(name).toLowerCase().split('').map(ch => map[ch] !== undefined ? map[ch] : ch).join('');
+  return translit.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'category';
+}
+
+router.get('/categories', (req, res) => {
+  const db = getDb();
+  const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order, id').all();
+  res.json(categories);
+});
+
+router.post('/categories', (req, res) => {
+  const db = getDb();
+  const { name, sort_order } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Название обязательно' });
+
+  let slug = slugify(name);
+  // slug должен быть уникальным
+  const exists = db.prepare('SELECT id FROM categories WHERE slug=?').get(slug);
+  if (exists) slug = `${slug}-${Date.now().toString().slice(-5)}`;
+
+  try {
+    const result = db.prepare(
+      'INSERT INTO categories (name, slug, sort_order, active) VALUES (?, ?, ?, 1)'
+    ).run(name.trim(), slug, parseInt(sort_order) || 0);
+    logAction(db, 'category_create', `Создана категория: ${name}`, req);
+    res.json({ id: result.lastInsertRowid, slug });
+  } catch (e) {
+    if (e.message.includes('UNIQUE')) return res.status(400).json({ error: 'Категория с таким названием уже есть' });
+    throw e;
+  }
+});
+
+router.put('/categories/:id', (req, res) => {
+  const db = getDb();
+  const { name, sort_order, active } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Название обязательно' });
+
+  db.prepare(
+    'UPDATE categories SET name=?, sort_order=?, active=? WHERE id=?'
+  ).run(name.trim(), parseInt(sort_order) || 0, active ? 1 : 0, req.params.id);
+  logAction(db, 'category_update', `Обновлена категория ID ${req.params.id}: ${name}`, req);
+  res.json({ ok: true });
+});
+
+router.delete('/categories/:id', (req, res) => {
+  const db = getDb();
+  const cat = db.prepare('SELECT * FROM categories WHERE id=?').get(req.params.id);
+  if (!cat) return res.status(404).json({ error: 'Не найдена' });
+
+  const inUse = db.prepare('SELECT COUNT(*) c FROM products WHERE category=?').get(cat.name).c;
+  if (inUse > 0) return res.status(400).json({ error: `В этой категории ${inUse} товар(ов) — сначала перенесите или удалите их` });
+
+  if (cat.cover_image) {
+    const imgPath = path.join(__dirname, '..', 'public', cat.cover_image);
+    try { fs.unlinkSync(imgPath); } catch (e) {}
+  }
+  db.prepare('DELETE FROM categories WHERE id=?').run(req.params.id);
+  logAction(db, 'category_delete', `Удалена категория: ${cat.name}`, req);
+  res.json({ ok: true });
+});
+
+// Загрузка обложки категории
+router.post('/categories/:id/image', (req, res) => {
+  if (!req.files || !req.files.image) return res.status(400).json({ error: 'Нет файла' });
+  const db = getDb();
+  const file = req.files.image;
+  const ext = path.extname(file.name).toLowerCase();
+  if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext))
+    return res.status(400).json({ error: 'Только JPG/PNG/WEBP' });
+
+  const filename = `category_${req.params.id}_${Date.now()}${ext}`;
+  const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
+  const uploadPath = path.join(DATA_DIR, 'public', 'uploads', filename);
+
+  file.mv(uploadPath, (err) => {
+    if (err) return res.status(500).json({ error: 'Ошибка загрузки' });
+    const imgUrl = `/uploads/${filename}`;
+    db.prepare('UPDATE categories SET cover_image=? WHERE id=?').run(imgUrl, req.params.id);
+    logAction(db, 'category_image', `Загружена обложка категории ID ${req.params.id}`, req);
+    res.json({ url: imgUrl });
+  });
+});
+
 // ─── ЗАЯВКИ ──────────────────────────────────────────────────────────────────
 router.get('/leads', (req, res) => {
   const db = getDb();
