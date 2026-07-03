@@ -169,11 +169,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
     <section class="lp-section lp-final">
       <div class="lp-faq">
         <h3>Частые вопросы</h3>
+        <div id="lpFaqList">
         <details open><summary>Сколько изготавливается мебель?</summary><p>В среднем 14–30 дней — зависит от модели, комплектации и загруженности производства.</p></details>
         <details><summary>Можно изменить размеры?</summary><p>Да, мы изготавливаем мебель по вашим индивидуальным размерам.</p></details>
         <details><summary>Можно выбрать ткань?</summary><p>Да, есть более 50 вариантов тканей и цветов под любой интерьер.</p></details>
         <details><summary>Есть доставка?</summary><p>Да, организуем доставку и заранее согласуем удобную дату.</p></details>
         <details><summary>Как оформить заказ?</summary><p>Оставьте заявку — мы свяжемся, уточним детали и подготовим расчёт.</p></details>
+        </div>
       </div>
       <div class="lp-form" id="leadForm">
         <h3>Осталось сделать один шаг</h3>
@@ -188,7 +190,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
     <div class="social-h lp-social">Мы тоже по мебели — заходите:</div>
     <div class="social"><a class="soc vk" href="https://vk.ru/club140569973" target="_blank" rel="noopener"><span class="soc-i">VK</span>ВКонтакте</a><a class="soc av" href="https://www.avito.ru/user/4bfc13ef997d795e6d10c928bc5ade9f/profile?src=sharing" target="_blank" rel="noopener"><span class="soc-i">A</span>Авито</a><a class="soc tg" href="https://t.me/MVildi" target="_blank" rel="noopener"><span class="soc-i">TG</span>Telegram</a></div>
     <div id="rtWorks" class="rt-section" style="display:none"></div>
-    <div id="rtFaq" class="rt-section" style="display:none"></div>
   </div>
   <div id="vChairs" style="display:none"><div class="count" id="count"></div><div class="delnote"><b>Доставка по РТ:</b> 200 ₽ за стул, от 4 стульев — бесплатно. Вместе с кроватью и/или матрасом — бесплатно.</div><div class="grid" id="grid"></div></div>
   <div id="vBanketki" style="display:none"><div class="secth">Банкетки/обувница</div><div class="delnote"><b>Доставка по РТ:</b> 300 ₽ за банкетку. Вместе с кроватью и/или матрасом — бесплатно.</div><div class="grid" id="banketkiGrid"></div></div>
@@ -406,17 +407,11 @@ function rtRenderPortfolio(items){
       }).join('')+'</div>';
 }
 function rtRenderFaq(items){
-  var el=document.getElementById("rtFaq"); if(!el)return;
-  if(!items||!items.length){el.style.display="none";return;}
-  el.style.display="";
-  el.innerHTML='<div class="home-h" style="margin-top:26px">Частые вопросы</div>'
-    +'<div style="display:flex;flex-direction:column;gap:8px">'
-    +items.map(function(f){
-        return '<details style="background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.06)">'
-          +'<summary style="font-weight:700;cursor:pointer;font-size:14px;color:#1f2d24">'+(f.question||'')+'</summary>'
-          +'<div style="font-size:13px;color:#445;margin-top:8px;line-height:1.5">'+(f.answer||'')+'</div>'
-          +'</details>';
-      }).join('')+'</div>';
+  var el=document.getElementById("lpFaqList"); if(!el)return;
+  if(!items||!items.length)return; // нет вопросов в админке — оставляем дефолтные
+  el.innerHTML=items.map(function(f,i){
+        return '<details'+(i===0?" open":"")+'><summary>'+(f.question||'')+'</summary><p>'+(f.answer||'')+'</p></details>';
+      }).join('');
 }
 (function rtBoot(){
   try{
