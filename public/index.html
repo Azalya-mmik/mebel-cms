@@ -204,7 +204,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
   </div>
   <div id="vChairs" style="display:none"><div class="count" id="count"></div><div class="delnote" id="chairDelNote"><b>Доставка по РТ:</b> 200 ₽ за стул, от 4 стульев — бесплатно. Вместе с кроватью и/или матрасом — бесплатно.</div><div class="grid" id="grid"></div></div>
   <div id="vBanketki" style="display:none"><div class="secth">Банкетки/обувница</div><div class="delnote" id="bnkDelNote"><b>Доставка по РТ:</b> 300 ₽ за банкетку. Вместе с кроватью и/или матрасом — бесплатно.</div><div class="grid" id="banketkiGrid"></div></div>
-  <div id="vCatalog" style="display:none"><div class="secth" id="catTitle"></div><div class="delnote">Точную стоимость доставки уточним при оформлении заявки.</div><div class="grid" id="catGrid"></div></div>
+  <div id="vCatalog" style="display:none"><div class="secth" id="catTitle"></div><div class="delnote" id="catDelNote">Точную стоимость доставки уточним при оформлении заявки.</div><div class="grid" id="catGrid"></div></div>
   <div id="vMatras" style="display:none"><div class="secth">Матрасы — дешевле, чем на сайте</div><div class="delnote"><b>Доставка по РТ:</b> бесплатно, до подъезда или дома.</div><div class="mtr-pitch">Помогаю заказать матрасы дешевле, чем на сайте производителя. Модель выбираете в каталоге со всеми характеристиками, а оформляете через меня — со спецценой и <b>бесплатной доставкой по РТ</b>.</div><div class="mtr-steps"><div class="mtr-step"><b>1</b><span>Выбираете матрас в каталоге производителя</span></div><div class="mtr-step"><b>2</b><span>Присылаете мне модель и размер</span></div><div class="mtr-step"><b>3</b><span>Я присылаю спеццену + доставка 0 ₽ по РТ</span></div></div><a class="mtr-cat" id="mtrCat" href="#" target="_blank" rel="noopener">Открыть каталог матрасов ↗</a><div class="mtr-calc"><div class="mtr-h">Оставить заявку на матрас</div><div class="field"><label>Модель и размер (как в каталоге)</label><input id="mtrModel" placeholder="напр. Базис 160×200"></div><div class="field"><label>Цена на сайте, ₽ (если знаете)</label><input id="mtrPrice" type="tel" inputmode="numeric" placeholder="напр. 24990"></div><div class="mtr-info">Спеццену (ниже, чем на сайте) и наличие пришлю в ответ на заявку. Доставка по РТ — бесплатно.</div><button class="bedadd" id="mtrAdd" style="margin-top:4px">Добавить в заявку</button><div class="mtr-note">При заказе матраса вместе с кроватью — доставка комплекта за мой счёт.</div><div class="mtr-disc">Я частный продавец, не являюсь официальным дилером и не связан с производителем матрасов. Продаю оригинальную продукцию; вопросы обмена и возврата решаются со мной.</div></div></div>
   <div id="vBeds" style="display:none" class="cfg">
     <div class="preview"><img id="bedPreview" alt="кровать"></div>
@@ -332,7 +332,7 @@ function renderBanketki(){const list=CHAIRS.filter(p=>p.type==="Банкетки
 
 /* ----- УНИВЕРСАЛЬНАЯ ВИТРИНА (новые категории из админки) ----- */
 let currentCat=null;
-function showCatalog(catName,noPush){hideAll();currentCat=catName;document.getElementById("catTitle").textContent=catName;document.getElementById("vCatalog").style.display="";renderCatalog();setBack(true);window.scrollTo(0,0);if(!noPush)history.pushState({page:"cat",cat:catName},"","");}
+function showCatalog(catName,noPush){hideAll();currentCat=catName;document.getElementById("catTitle").textContent=catName;var _dn=document.getElementById("catDelNote");if(_dn){var _c=CATEGORY_DELIVERY[catName];if(_c&&_c.price>0){_dn.innerHTML="<b>Доставка по РТ:</b> "+_c.price+" ₽/шт"+(_c.freeFrom?", от "+_c.freeFrom+" шт — бесплатно":"")+".";}else{_dn.textContent="Доставка по РТ бесплатна для этой категории.";}}document.getElementById("vCatalog").style.display="";renderCatalog();setBack(true);window.scrollTo(0,0);if(!noPush)history.pushState({page:"cat",cat:catName},"","");}
 function renderCatalog(){const list=CHAIRS.filter(p=>p.type===currentCat);const g=document.getElementById("catGrid");g.innerHTML="";if(!list.length){g.innerHTML='<div style="padding:24px;color:#78776e">Товары этой категории скоро появятся</div>';return;}list.forEach(p=>g.appendChild(simpleCard(p)));}
 function simpleCard(p){
   const el=document.createElement("div");el.className="card";
@@ -430,8 +430,37 @@ buildBeds();
 
 /* ----- CART ----- */
 function entries(){return Object.keys(cart).map(k=>({k,...cart[k]}));}
-function totals(){let c=0,s=0;entries().forEach(e=>{c+=e.qty;s+=e.qty*e.price;});return{c,s};}var DELIVERY_CFG={bed:1500,chair:200,chairFreeFrom:4,banketka:300};
-function delivery(){var ks=Object.keys(cart);if(!ks.length)return null;var b=ks.some(function(k){return k.indexOf("bed-")===0;}),m=ks.some(function(k){return k.indexOf("mtr-")===0;});var ch=0,bn=0;ks.forEach(function(k){if(k.indexOf("chair-")===0)ch+=cart[k].qty;else if(k.indexOf("bnk-")===0)bn+=cart[k].qty;});if(b&&m)return{fee:0,label:"Доставка комплекта по РТ, до подъезда/дома"};var fee=0,ride=b||m;if(b)fee+=DELIVERY_CFG.bed;if(!ride){if(ch>0&&ch<DELIVERY_CFG.chairFreeFrom)fee+=ch*DELIVERY_CFG.chair;if(bn>0)fee+=bn*DELIVERY_CFG.banketka;}return{fee:fee,label:"Доставка по РТ, до подъезда/дома"};}
+function totals(){let c=0,s=0;entries().forEach(e=>{c+=e.qty;s+=e.qty*e.price;});return{c,s};}var DELIVERY_CFG={bed:1500,chair:200,chairFreeFrom:4,freeFromOrderTotal:0};
+var CATEGORY_DELIVERY={"Банкетки":{price:300,freeFrom:null}};
+function applyOrderFree(res){
+  if(DELIVERY_CFG.freeFromOrderTotal>0&&totals().s>=DELIVERY_CFG.freeFromOrderTotal)return{fee:0,label:res.label};
+  return res;
+}
+function delivery(){
+  var ks=Object.keys(cart);
+  if(!ks.length)return null;
+  var b=ks.some(function(k){return k.indexOf("bed-")===0;}),m=ks.some(function(k){return k.indexOf("mtr-")===0;});
+  if(b&&m)return applyOrderFree({fee:0,label:"Доставка комплекта по РТ, до подъезда/дома"});
+  var fee=0,ride=b||m;
+  if(b)fee+=DELIVERY_CFG.bed;
+  if(!ride){
+    var ch=0,catQty={};
+    ks.forEach(function(k){
+      if(k.indexOf("chair-")===0){ch+=cart[k].qty;}
+      else if(k.indexOf("bnk-")===0){catQty["Банкетки"]=(catQty["Банкетки"]||0)+cart[k].qty;}
+      else if(k.indexOf("cat-")===0){var nm=cart[k].sub||"";catQty[nm]=(catQty[nm]||0)+cart[k].qty;}
+    });
+    if(ch>0&&ch<DELIVERY_CFG.chairFreeFrom)fee+=ch*DELIVERY_CFG.chair;
+    Object.keys(catQty).forEach(function(nm){
+      var cfgc=CATEGORY_DELIVERY[nm];
+      if(!cfgc)return;
+      var q=catQty[nm];
+      if(cfgc.freeFrom&&q>=cfgc.freeFrom)return;
+      fee+=q*(cfgc.price||0);
+    });
+  }
+  return applyOrderFree({fee:fee,label:"Доставка по РТ, до подъезда/дома"});
+}
 function plural(n){const a=n%10,b=n%100;let w="позиций";if(a===1&&b!==11)w="позиция";else if(a>=2&&a<=4&&(b<10||b>=20))w="позиции";return n+" "+w;}
 function updateBar(){const{c,s}=totals(),bar=document.getElementById("cartbar"),badge=document.getElementById("cartBadge");
  if(c>0){bar.classList.add("show");document.getElementById("cbCount").textContent=plural(c);var _d=delivery();document.getElementById("cbSum").textContent=fmt(s+(_d?_d.fee:0));badge.textContent=c;badge.classList.add("show");}
@@ -563,10 +592,21 @@ function submitReview(){
     }).catch(function(){});
     fetch("/api/public/config").then(function(r){return r.json();}).then(function(cfg){
       rtRenderPortfolio(cfg&&cfg.portfolio); rtRenderFaq(cfg&&cfg.faq); renderCategoryTiles(cfg&&cfg.categories); rtRenderReviews(cfg&&cfg.reviews); rtRenderSocial(cfg&&cfg.settings); rtApplyContact(cfg&&cfg.settings);
-      if(cfg&&cfg.delivery){DELIVERY_CFG.bed=Number(cfg.delivery.bed)||DELIVERY_CFG.bed;DELIVERY_CFG.chair=Number(cfg.delivery.chair)||DELIVERY_CFG.chair;DELIVERY_CFG.chairFreeFrom=Number(cfg.delivery.chairFreeFrom)||DELIVERY_CFG.chairFreeFrom;DELIVERY_CFG.banketka=Number(cfg.delivery.banketka)||DELIVERY_CFG.banketka;
+      if(cfg&&cfg.delivery){
+        DELIVERY_CFG.bed=Number(cfg.delivery.bed)||DELIVERY_CFG.bed;
+        DELIVERY_CFG.chair=Number(cfg.delivery.chair)||DELIVERY_CFG.chair;
+        DELIVERY_CFG.chairFreeFrom=Number(cfg.delivery.chairFreeFrom)||DELIVERY_CFG.chairFreeFrom;
+        DELIVERY_CFG.freeFromOrderTotal=Number(cfg.delivery.freeFromOrderTotal)||0;
         var cdn=document.getElementById("chairDelNote"); if(cdn)cdn.innerHTML="<b>Доставка по РТ:</b> "+DELIVERY_CFG.chair+" ₽ за стул, от "+DELIVERY_CFG.chairFreeFrom+" стульев — бесплатно. Вместе с кроватью и/или матрасом — бесплатно.";
-        var bdn=document.getElementById("bnkDelNote"); if(bdn)bdn.innerHTML="<b>Доставка по РТ:</b> "+DELIVERY_CFG.banketka+" ₽ за банкетку. Вместе с кроватью и/или матрасом — бесплатно.";
         var beddn=document.getElementById("bedDelNote"); if(beddn)beddn.innerHTML="<b>Доставка по РТ:</b> "+fmt(DELIVERY_CFG.bed)+" до подъезда или дома. Бесплатно при заказе вместе с матрасом — стулья и банкетки в таком заказе тоже бесплатно.";
+      }
+      if(Array.isArray(cfg&&cfg.categories)){
+        cfg.categories.forEach(function(c){
+          CATEGORY_DELIVERY[c.name]={price:Number(c.delivery_price)||0,freeFrom:c.delivery_free_from!=null?Number(c.delivery_free_from):null};
+        });
+        var bk=CATEGORY_DELIVERY["Банкетки"];
+        var bdn=document.getElementById("bnkDelNote");
+        if(bdn&&bk){bdn.innerHTML="<b>Доставка по РТ:</b> "+(bk.price>0?bk.price+" ₽ за банкетку":"бесплатно")+(bk.freeFrom?", от "+bk.freeFrom+" шт — бесплатно":"")+". Вместе с кроватью и/или матрасом — бесплатно.";}
       }
     }).catch(function(){});
   }catch(e){}
