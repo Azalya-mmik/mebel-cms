@@ -130,28 +130,6 @@ function initDb() {
       value REAL DEFAULT 1.0,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-
-    -- Партнёрские промокоды
-    CREATE TABLE IF NOT EXISTS promo_codes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      code TEXT NOT NULL UNIQUE,
-      partner_name TEXT NOT NULL,
-      discount_pct REAL NOT NULL DEFAULT 3,
-      active INTEGER NOT NULL DEFAULT 1,
-      telegram_chat_id TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    -- Использования промокодов
-    CREATE TABLE IF NOT EXISTS promo_usages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      promo_id INTEGER NOT NULL REFERENCES promo_codes(id),
-      lead_id INTEGER NOT NULL REFERENCES leads(id),
-      order_amount INTEGER NOT NULL DEFAULT 0,
-      reward_amount REAL NOT NULL DEFAULT 0,
-      product_name TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
   `);
 
   // Начальные настройки
