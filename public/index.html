@@ -106,7 +106,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
         <h1>Мебель на заказ <span>без переплаты магазину</span> — под ваш размер и бюджет</h1>
         <p>Кровати, стулья, банкетки и матрасы напрямую от производителя. Поможем выбрать материалы, рассчитаем точную стоимость и организуем доставку.</p>
         <div class="lp-hero-actions">
-          <button class="lp-btn" onclick="leadJump()">Получить расчёт стоимости</button>
+          <button class="lp-btn" onclick="leadScroll()">Получить расчёт стоимости</button>
           <button class="lp-btn alt" onclick="document.getElementById('lpCatalog').scrollIntoView({behavior:'smooth'})">Смотреть каталог</button>
         </div>
         <div class="lp-micro"><span>Бесплатная консультация</span><span>Без обязательств</span><span>Ответ за 10 минут</span></div>
@@ -163,7 +163,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
         <div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">Р</div><div><b>Рустем</b><small>Набережные Челны</small></div></div><div class="lp-stars">★★★★★</div><p>Заказывали кровать и матрас. Очень довольны сервисом и качеством. Цена приятнее, чем в магазинах.</p></div>
         <div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">Е</div><div><b>Елена</b><small>Казань</small></div></div><div class="lp-stars">★★★★★</div><p>Подобрали ткань под наш интерьер, всё сделали аккуратно и быстро. Рекомендую.</p></div>
       </div>
-      <div style="text-align:center;margin-top:18px"><button class="lp-btn" onclick="leadJump()">Подобрать мебель бесплатно</button></div>
+      <div style="text-align:center;margin-top:18px"><button class="lp-btn" onclick="leadScroll()">Подобрать мебель бесплатно</button></div>
     </section>
 
     <section class="lp-section lp-final">
@@ -180,7 +180,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
         <p>Оставьте имя и телефон — мы свяжемся с вами, уточним детали и подготовим точный расчёт без обязательств.</p>
         <div class="field"><label>Ваше имя</label><input id="lName" placeholder="Как к вам обращаться"></div>
         <div class="field"><label>Телефон</label><input id="lPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 ___ ___-__-__"></div>
-        <button class="lp-btn" style="width:100%" onclick="leadJump(true)">Получить расчёт стоимости</button>
+        <button class="lp-btn" style="width:100%" id="lSend" onclick="submitLeadForm()">Получить расчёт стоимости</button>
         <div class="lp-trustline">Ваши данные используются только для связи по заявке</div>
       </div>
     </section>
@@ -210,11 +210,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
   <div id="vCart" style="display:none">
     <div class="cart-h">Корзина</div>
     <div id="cartList"></div>
-    <div id="cartSummary"><div class="cdelivery" id="cartDelivery" style="display:none"></div><div class="total"><span>Итого</span><span id="cartTotal">0 ₽</span></div>
+    <div id="cartSummary"><div class="cdelivery" id="cartDelivery" style="display:none"></div><div class="total"><span>Итого</span><span id="cartTotal">0 ₽</span></div></div>
+    <div id="cartForm">
     <div class="field"><label>Ваше имя</label><input id="cName" placeholder="Как к вам обращаться"></div>
     <div class="field"><label>Телефон</label><input id="cPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="+7 ___ ___-__-__"></div>
     <div class="field"><label>Адрес доставки</label><input id="cAddr" autocomplete="street-address" placeholder="Город, улица, дом, квартира"></div><div class="field"><label>Комментарий (удобное время и т.п.)</label><textarea id="cNote"></textarea></div>
-    <div class="send"><button class="b-send" id="bSend" onclick="submitLead()">Оставить заявку</button></div></div>
+    <div class="send"><button class="b-send" id="bSend" onclick="submitLead()">Оставить заявку</button></div>
+    </div>
   </div>
 </div>
 <footer id="foot"></footer>
@@ -363,7 +365,7 @@ function updateBar(){const{c,s}=totals(),bar=document.getElementById("cartbar"),
  if(document.getElementById("vCart").style.display!=="none")renderCart();}
 function refreshGrids(){if(document.getElementById("vChairs").style.display!=="none")renderChairs();if(document.getElementById("vBanketki").style.display!=="none")renderBanketki();}
 function renderCart(){const items=entries(),list=document.getElementById("cartList"),sum=document.getElementById("cartSummary");
- if(!items.length){list.innerHTML='<div class="empty">Корзина пуста</div><button class="bedadd" onclick="showHome()">Перейти к каталогу</button>';sum.style.display="none";document.getElementById("cartbar").classList.remove("show");return;}
+ if(!items.length){list.innerHTML='<div class="empty">Корзина пуста — но вы можете оставить заявку без товаров, и мы посчитаем стоимость по телефону</div><button class="bedadd" onclick="showHome()">Перейти к каталогу</button>';sum.style.display="none";document.getElementById("cartbar").classList.remove("show");return;}
  sum.style.display="";list.innerHTML="";
  items.forEach(e=>{const row=document.createElement("div");row.className="citem";
   row.innerHTML='<div class="cmain"><div class="cname">'+e.name+'</div>'+(e.sub?'<div class="csub">'+e.sub+'</div>':'')+'<div class="cprice">'+(e.price>0?fmt(e.price*e.qty):"по запросу")+'</div></div><div class="cright"><div class="stepper2"><button class="cm">−</button><span>'+e.qty+'</span><button class="cp">+</button></div><button class="crm">Удалить</button></div>';
@@ -376,7 +378,9 @@ function orderText(){let t="Здравствуйте! Хочу заказать:
  var _dl=delivery();if(_dl)t+="• "+_dl.label+" — "+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+"\n";t+="Итого: "+fmt(totals().s+(_dl?_dl.fee:0));const n=document.getElementById("cName").value.trim(),ph=document.getElementById("cPhone").value.trim(),ad=(document.getElementById("cAddr")?document.getElementById("cAddr").value.trim():""),nt=document.getElementById("cNote").value.trim();
  if(n)t+="\nИмя: "+n;if(ph)t+="\nТелефон: "+ph;if(ad)t+="\nАдрес: "+ad;if(nt)t+="\nКомментарий: "+nt;return t;}
 function buildLinks(){var c=document.getElementById("bCall");if(c)c.href="tel:"+CONFIG.phone;}function xsellOpen(){document.getElementById("xsell").classList.add("show");}function xsellClose(){document.getElementById("xsell").classList.remove("show");}function xsellGo(){xsellClose();showMatras();}function xsellCart(){xsellClose();showCart();}
-["cName","cPhone","cAddr","cNote"].forEach(id=>{var _e=document.getElementById(id);if(_e)_e.addEventListener("input",buildLinks);});(function(){var ph=document.getElementById("cPhone");if(!ph)return;function f(v){var d=v.replace(/\D/g,"");if(d&&d[0]==="8")d="7"+d.slice(1);if(d&&d[0]!=="7")d="7"+d;d=d.slice(0,11);var r="+7";if(d.length>1)r+=" "+d.slice(1,4);if(d.length>=4)r+=" "+d.slice(4,7);if(d.length>=7)r+="-"+d.slice(7,9);if(d.length>=9)r+="-"+d.slice(9,11);return r;}ph.addEventListener("focus",function(){if(!ph.value)ph.value="+7 ";});ph.addEventListener("input",function(){ph.value=f(ph.value);});ph.addEventListener("blur",function(){if(ph.value.replace(/\D/g,"").length<=1)ph.value="";});})();
+["cName","cPhone","cAddr","cNote"].forEach(id=>{var _e=document.getElementById(id);if(_e)_e.addEventListener("input",buildLinks);});
+function attachPhoneMask(id){var ph=document.getElementById(id);if(!ph)return;function f(v){var d=v.replace(/\D/g,"");if(d&&d[0]==="8")d="7"+d.slice(1);if(d&&d[0]!=="7")d="7"+d;d=d.slice(0,11);var r="+7";if(d.length>1)r+=" "+d.slice(1,4);if(d.length>=4)r+=" "+d.slice(4,7);if(d.length>=7)r+="-"+d.slice(7,9);if(d.length>=9)r+="-"+d.slice(9,11);return r;}ph.addEventListener("focus",function(){if(!ph.value)ph.value="+7 ";});ph.addEventListener("input",function(){ph.value=f(ph.value);});ph.addEventListener("blur",function(){if(ph.value.replace(/\D/g,"").length<=1)ph.value="";});}
+attachPhoneMask("cPhone");attachPhoneMask("lPhone");
 function copyTxt(t){var d=false;try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);d=true;}}catch(e){}if(!d){try{var a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.position="fixed";a.style.top="-1000px";document.body.appendChild(a);a.focus();a.select();try{a.setSelectionRange(0,t.length);}catch(e){}document.execCommand("copy");document.body.removeChild(a);}catch(e){}}}
 function submitLead(){var phone=document.getElementById("cPhone").value.trim();var name=document.getElementById("cName").value.trim();if(!phone&&!name){toast("Укажите телефон или имя");var f=document.getElementById("cPhone");if(f)f.focus();return;}var msg=orderText();var btn=document.getElementById("bSend");var old=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="Отправляем…";}fetch("/api/public/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name,phone:phone,message:msg,source:"Сайт R&T"})}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(){toast("Заявка отправлена! Мы свяжемся с вами");Object.keys(cart).forEach(function(k){delete cart[k];});updateBar();renderCart();setTimeout(showHome,800);}).catch(function(){copyTxt(orderText());toast("Не удалось отправить — заявка скопирована, позвоните или напишите нам");}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});}
 function sendVK(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(CONFIG.vk,"_blank");},450);}function sendTG(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open("https://t.me/MVildi","_blank");},450);}
@@ -426,13 +430,23 @@ function rtRenderFaq(items){
   showHome();
 })();
 
-function leadJump(fromForm){
-  var ln=document.getElementById("lName"), lp=document.getElementById("lPhone");
-  var cn=document.getElementById("cName"), cp=document.getElementById("cPhone");
-  if(ln&&cn&&ln.value.trim()) cn.value=ln.value.trim();
-  if(lp&&cp&&lp.value.trim()) cp.value=lp.value.trim();
-  showCart();
-  setTimeout(function(){var f=document.getElementById("cPhone"); if(f) f.focus();},120);
+function leadScroll(){
+  var sec=document.getElementById("leadForm");
+  if(sec) sec.scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(function(){var f=document.getElementById("lName"); if(f) f.focus();},400);
+}
+function submitLeadForm(){
+  var name=document.getElementById("lName").value.trim();
+  var phone=document.getElementById("lPhone").value.trim();
+  if(!phone){toast("Укажите номер телефона");var f=document.getElementById("lPhone");if(f)f.focus();return;}
+  var btn=document.getElementById("lSend");var old=btn?btn.textContent:"";
+  if(btn){btn.disabled=true;btn.textContent="Отправляем…";}
+  var msg="Заявка с формы «Получить расчёт стоимости» (лендинг)";
+  fetch("/api/public/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name,phone:phone,message:msg,source:"Сайт R&T - лендинг"})})
+  .then(function(r){if(!r.ok)throw 0;return r.json();})
+  .then(function(){toast("Заявка отправлена! Мы свяжемся с вами в ближайшее время");document.getElementById("lName").value="";document.getElementById("lPhone").value="";})
+  .catch(function(){copyTxt("Имя: "+(name||"—")+"\nТелефон: "+phone+"\n"+msg);toast("Не удалось отправить — данные скопированы, позвоните нам");})
+  .finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});
 }
 try{ if(typeof TILE_BEDS!=="undefined"){ var hb=document.getElementById("heroBed"); if(hb) hb.src=TILE_BEDS[0]; } }catch(e){}
 
