@@ -158,12 +158,23 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
 
     <section class="lp-section">
       <h2 class="lp-title">Отзывы наших клиентов</h2>
-      <div class="lp-reviews">
+      <div class="lp-reviews" id="lpReviewsList">
         <div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">И</div><div><b>Ирина</b><small>Казань</small></div></div><div class="lp-stars">★★★★★</div><p>Кровать изготовили точно по размерам, качество ткани отличное. Доставили и собрали в срок.</p></div>
         <div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">Р</div><div><b>Рустем</b><small>Набережные Челны</small></div></div><div class="lp-stars">★★★★★</div><p>Заказывали кровать и матрас. Очень довольны сервисом и качеством. Цена приятнее, чем в магазинах.</p></div>
         <div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">Е</div><div><b>Елена</b><small>Казань</small></div></div><div class="lp-stars">★★★★★</div><p>Подобрали ткань под наш интерьер, всё сделали аккуратно и быстро. Рекомендую.</p></div>
       </div>
-      <div style="text-align:center;margin-top:18px"><button class="lp-btn" onclick="leadScroll()">Подобрать мебель бесплатно</button></div>
+      <div style="text-align:center;margin-top:18px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="lp-btn" onclick="leadScroll()">Подобрать мебель бесплатно</button>
+        <button class="lp-btn alt" onclick="toggleReviewForm()">Оставить отзыв</button>
+      </div>
+      <div class="lp-form" id="reviewForm" style="display:none;max-width:480px;margin:18px auto 0">
+        <h3 style="font-size:19px">Ваш отзыв</h3>
+        <div class="field"><label>Ваше имя</label><input id="rvAuthor" placeholder="Как к вам обращаться"></div>
+        <div class="field"><label>Оценка</label><div id="rvStars" class="lp-stars" style="cursor:pointer;font-size:26px;letter-spacing:4px"></div></div>
+        <div class="field"><label>Отзыв</label><textarea id="rvText" rows="3" placeholder="Расскажите, как всё прошло"></textarea></div>
+        <button class="lp-btn" style="width:100%" id="rvSend" onclick="submitReview()">Отправить отзыв</button>
+        <div class="lp-trustline">Отзыв появится на сайте после проверки</div>
+      </div>
     </section>
 
     <section class="lp-section lp-final">
@@ -457,13 +468,54 @@ function rtRenderFaq(items){
         return '<details'+(i===0?" open":"")+'><summary>'+(f.question||'')+'</summary><p>'+(f.answer||'')+'</p></details>';
       }).join('');
 }
+function rtEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function rtRenderReviews(items){
+  var el=document.getElementById("lpReviewsList"); if(!el)return;
+  if(!items||!items.length)return; // нет одобренных отзывов — оставляем дефолтные примеры
+  el.innerHTML=items.map(function(r){
+        var initial=(r.author||"?").trim().charAt(0).toUpperCase();
+        var stars="★".repeat(r.rating||5)+"☆".repeat(5-(r.rating||5));
+        return '<div class="lp-review"><div class="lp-review-head"><div class="lp-avatar">'+rtEsc(initial)+'</div><div><b>'+rtEsc(r.author)+'</b></div></div><div class="lp-stars">'+stars+'</div><p>'+rtEsc(r.text)+'</p></div>';
+      }).join('');
+}
+var rvRating=5;
+function renderRvStars(){
+  var box=document.getElementById("rvStars"); if(!box)return;
+  box.innerHTML="";
+  for(var i=1;i<=5;i++){
+    (function(i){
+      var s=document.createElement("span");
+      s.textContent=i<=rvRating?"★":"☆";
+      s.onclick=function(){rvRating=i;renderRvStars();};
+      box.appendChild(s);
+    })(i);
+  }
+}
+function toggleReviewForm(){
+  var f=document.getElementById("reviewForm"); if(!f)return;
+  var show=f.style.display==="none";
+  f.style.display=show?"":"none";
+  if(show){renderRvStars();f.scrollIntoView({behavior:"smooth",block:"center"});}
+}
+function submitReview(){
+  var author=document.getElementById("rvAuthor").value.trim();
+  var text=document.getElementById("rvText").value.trim();
+  if(!author||!text){toast("Заполните имя и текст отзыва");return;}
+  var btn=document.getElementById("rvSend");var old=btn?btn.textContent:"";
+  if(btn){btn.disabled=true;btn.textContent="Отправляем…";}
+  fetch("/api/public/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({author:author,text:text,rating:rvRating})})
+  .then(function(r){if(!r.ok)throw 0;return r.json();})
+  .then(function(){toast("Спасибо! Отзыв отправлен на проверку");document.getElementById("rvAuthor").value="";document.getElementById("rvText").value="";rvRating=5;renderRvStars();document.getElementById("reviewForm").style.display="none";})
+  .catch(function(){toast("Не удалось отправить отзыв, попробуйте позже");})
+  .finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});
+}
 (function rtBoot(){
   try{
     fetch("/api/public/products").then(function(r){return r.json();}).then(function(d){
       if(Array.isArray(d)&&d.length){CHAIRS=d;}
     }).catch(function(){});
     fetch("/api/public/config").then(function(r){return r.json();}).then(function(cfg){
-      rtRenderPortfolio(cfg&&cfg.portfolio); rtRenderFaq(cfg&&cfg.faq); renderCategoryTiles(cfg&&cfg.categories);
+      rtRenderPortfolio(cfg&&cfg.portfolio); rtRenderFaq(cfg&&cfg.faq); renderCategoryTiles(cfg&&cfg.categories); rtRenderReviews(cfg&&cfg.reviews);
     }).catch(function(){});
   }catch(e){}
   showHome();
