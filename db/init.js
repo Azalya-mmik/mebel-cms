@@ -123,6 +123,17 @@ function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Категории каталога (витрины на сайте)
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      slug TEXT NOT NULL UNIQUE,
+      cover_image TEXT,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Калькулятор (коэффициенты цен)
     CREATE TABLE IF NOT EXISTS calculator (
       id TEXT PRIMARY KEY,
@@ -186,8 +197,21 @@ function initDb() {
     ].forEach(([q, a, o]) => insFaq.run(q, a, o));
   }
 
+  // Стартовые категории каталога (добавляются один раз, если таблица пуста)
+  const catCount = db.prepare('SELECT COUNT(*) as c FROM categories').get();
+  if (catCount.c === 0) {
+    const insCat = db.prepare('INSERT INTO categories (name, slug, sort_order, active) VALUES (?, ?, ?, 1)');
+    [
+      ['Табуреты', 'tabureti', 1],
+      ['Стулья', 'stulya', 2],
+      ['Банкетки', 'banketki', 3],
+      ['Прочее', 'prochee', 4],
+    ].forEach(([name, slug, order]) => insCat.run(name, slug, order));
+  }
+
   // ── Каталог: расширяем таблицу products нужными полями (миграция) ──
   const cols = db.prepare("PRAGMA table_info(products)").all().map(c => c.name);
+
   const addCol = (name, def) => { if (!cols.includes(name)) db.exec(`ALTER TABLE products ADD COLUMN ${name} ${def}`); };
   addCol('colors', 'TEXT');     // JSON-массив строк
   addCol('specs', 'TEXT');      // JSON-массив строк
