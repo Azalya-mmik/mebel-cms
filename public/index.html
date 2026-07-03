@@ -38,7 +38,7 @@ header{position:sticky;top:0;z-index:30;background:var(--pine);color:#F4EFE3;pad
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
 .ph{aspect-ratio:1/1;background:#ECE6D8;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .ph img{width:100%;height:100%;object-fit:contain;display:block}
-.dots{position:absolute;bottom:8px;left:0;right:0;display:flex;gap:6px;justify-content:center}.dots i{width:8px;height:8px;border-radius:50%;background:#00000033;cursor:pointer}.dots i.on{background:var(--pine)}
+.dots{position:absolute;bottom:8px;left:0;right:0;display:flex;gap:6px;justify-content:center}.dots i{width:8px;height:8px;border-radius:50%;background:#00000033;cursor:pointer}.dots i.on{background:var(--pine)}.ph-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,.42);color:#fff;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;padding:0}.ph-arrow:active{background:rgba(0,0,0,.6)}.ph-prev{left:8px}.ph-next{right:8px}
 .cbody{padding:12px 13px 14px;display:flex;flex-direction:column;gap:7px;flex:1}
 .nm{font-weight:800;font-size:15px;line-height:1.22}.keyspec{font-size:12.5px;color:var(--muted)}.pr{font-weight:800;font-size:18px}
 .rot{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:11px;padding:7px 9px;cursor:pointer}.rot input{width:17px;height:17px;accent-color:var(--pine);margin:0}
@@ -298,6 +298,25 @@ var pr=document.getElementById("mtrPrice"),mo=document.getElementById("mtrModel"
 }
 
 /* ----- CHAIRS / BANKETKI ----- */
+function attachGallery(el,imgs){
+  const main=el.querySelector("[data-main]");
+  if(!main||!imgs||imgs.length<2)return;
+  const dots=el.querySelectorAll(".dots i");
+  const ph=el.querySelector(".ph");
+  main.style.cursor="pointer";
+  let idx=0;
+  function setImg(i){idx=(i+imgs.length)%imgs.length;main.src=imgs[idx];dots.forEach((d,di)=>d.classList.toggle("on",di===idx));}
+  dots.forEach((dot,di)=>dot.addEventListener("click",e=>{e.stopPropagation();setImg(di);}));
+  main.addEventListener("click",()=>setImg(idx+1));
+  let sx=null;
+  main.addEventListener("touchstart",e=>{sx=e.touches[0].clientX;},{passive:true});
+  main.addEventListener("touchend",e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>30)setImg(idx+(dx<0?1:-1));sx=null;});
+  if(ph){
+    const prev=document.createElement("button");prev.type="button";prev.className="ph-arrow ph-prev";prev.setAttribute("aria-label","Предыдущее фото");prev.innerHTML="‹";prev.onclick=e=>{e.stopPropagation();setImg(idx-1);};
+    const next=document.createElement("button");next.type="button";next.className="ph-arrow ph-next";next.setAttribute("aria-label","Следующее фото");next.innerHTML="›";next.onclick=e=>{e.stopPropagation();setImg(idx+1);};
+    ph.appendChild(prev);ph.appendChild(next);
+  }
+}
 let filter="Все";
 const LEGACY_CATS=["Стулья","Табуреты","Прочее"];
 const CHAIRTYPES=Array.from(new Set(CHAIRS.filter(p=>LEGACY_CATS.includes(p.type)).map(p=>p.type)));
@@ -318,10 +337,7 @@ function simpleCard(p){
     +'<div class="pr" data-pr></div>'
     +(p.specs&&p.specs.length?'<button class="more">Характеристики ▾</button><div class="det"><ul>'+p.specs.map(s=>'<li>'+s+'</li>').join('')+(p.colors&&p.colors.length?'</ul><div style="margin-top:6px"><b>Расцветки:</b><ul>'+p.colors.map(c=>'<li>'+c+'</li>').join('')+'</ul>':'</ul>')+'</div>':'')
     +'<div class="ctrl"></div></div>';
-  if(imgs.length>1){const main=el.querySelector("[data-main]");main.style.cursor="pointer";const dots=el.querySelectorAll(".dots i");let idx=0;
-    function setImg(i){idx=(i+imgs.length)%imgs.length;main.src=imgs[idx];dots.forEach((d,di)=>d.classList.toggle("on",di===idx));}
-    dots.forEach((dot,di)=>dot.addEventListener("click",e=>{e.stopPropagation();setImg(di);}));
-    main.addEventListener("click",()=>setImg(idx+1));}
+  attachGallery(el,imgs);
   if(p.specs&&p.specs.length){const moreBtn=el.querySelector(".more");if(moreBtn)moreBtn.onclick=e=>{const d=el.querySelector(".det");d.classList.toggle("open");e.target.textContent=d.classList.contains("open")?"Свернуть ▴":"Характеристики ▾";};}
   const prEl=el.querySelector("[data-pr]");prEl.innerHTML=fmt(p.cost);
   const ctrl=el.querySelector(".ctrl");
@@ -353,12 +369,7 @@ const ph=imgs&&imgs.length?'<img data-main src="'+imgs[0]+'" alt="'+p.name+'">'+
 const height=(p.specs.find(s=>/высота/i.test(s))||"").replace(/^[^:]*:/,'').trim();const seat=(p.specs.find(s=>/ширина сид|диаметр сид/i.test(s))||"");
 const key=[height&&("высота "+height),seat].filter(Boolean).join(" · ");
 el.innerHTML='<div class="ph">'+ph+'</div><div class="cbody"><div class="nm">'+p.name+'</div>'+(key?'<div class="keyspec">'+key+'</div>':'')+'<div class="pr" data-pr></div>'+(p.costRot?'<label class="rot"><input type="checkbox" data-rot> Крутящийся механизм (+'+fmt(p.costRot-p.cost)+')</label>':'')+'<button class="more">Характеристики ▾</button><div class="det"><ul>'+p.specs.map(s=>'<li>'+s+'</li>').join('')+'</ul><div style="margin-top:6px"><b>Расцветки:</b><ul>'+p.colors.map(c=>'<li>'+c+'</li>').join('')+'</ul></div></div><div class="swlabel" style="margin-top:10px;font-weight:700;font-size:13px;color:#3a352e">Цвет велюра (Madera) <span class="hint" data-cn style="font-weight:600;color:#8a8378"></span></div><div class="swatches" data-sw></div>'+(p.type!=="Банкетки"?'<div class="framefeat"><img src="'+FRAME_IMG+'" alt="усиленный каркас" loading="lazy"><div class="ff-t"><b>Усиленный каркас</b><span>Единое прочное крепление сиденья — не расшатывается со временем. Один каркас под все наши модели.</span></div></div>':'')+'<div class="swlabel" style="margin-top:10px;font-weight:700;font-size:13px;color:#3a352e">Ножки на выбор <span class="hint" data-ln style="font-weight:600;color:#8a8378"></span></div><div class="swatches" data-lg></div><div class="ctrl"></div></div>';
-if(imgs.length>1){const main=el.querySelector("[data-main]");main.style.cursor="pointer";const dots=el.querySelectorAll(".dots i");let idx=0;
- function setImg(i){idx=(i+imgs.length)%imgs.length;main.src=imgs[idx];dots.forEach((d,di)=>d.classList.toggle("on",di===idx));}
- dots.forEach((dot,di)=>dot.addEventListener("click",e=>{e.stopPropagation();setImg(di);}));
- main.addEventListener("click",()=>setImg(idx+1));
- let sx=null;main.addEventListener("touchstart",e=>{sx=e.touches[0].clientX;},{passive:true});
- main.addEventListener("touchend",e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>30)setImg(idx+(dx<0?1:-1));sx=null;});}
+attachGallery(el,imgs);
 var selN=MADERA[0].n;(function(){var box=el.querySelector("[data-sw]"),cn=el.querySelector("[data-cn]");function lum(x){var c=x.substring(1);return 0.299*parseInt(c.substr(0,2),16)+0.587*parseInt(c.substr(2,2),16)+0.114*parseInt(c.substr(4,2),16);}MADERA.forEach(function(v,i){var s=document.createElement("div");s.className="sw"+(i===0?" on":"");s.dataset.n=v.n;s.style.background=v.c;s.textContent=v.n;var L=lum(v.c);s.style.color=L>150?"#2a2a2a":"#fff";s.style.textShadow=L>150?"none":"0 1px 2px #0008";s.onclick=function(){selN=v.n;[].forEach.call(box.children,function(x){x.classList.toggle("on",x===s);});if(cn)cn.textContent="— № "+v.n;syncCtrl();};box.appendChild(s);});if(cn)cn.textContent="— № "+selN;})();var selLeg=LEGS[0].n;(function(){var box=el.querySelector("[data-lg]"),ln=el.querySelector("[data-ln]");function lum(x){var c=x.substring(1);return 0.299*parseInt(c.substr(0,2),16)+0.587*parseInt(c.substr(2,2),16)+0.114*parseInt(c.substr(4,2),16);}LEGS.forEach(function(v,i){var s=document.createElement("div");s.className="sw"+(i===0?" on":"");s.title=v.n;s.style.background=v.c;s.style.borderRadius="11px";if(lum(v.c)>150)s.style.border="2px solid #bbb";s.onclick=function(){selLeg=v.n;[].forEach.call(box.children,function(x){x.classList.toggle("on",x===s);});if(ln)ln.textContent="— "+v.n;syncCtrl();};box.appendChild(s);});if(ln)ln.textContent="— "+selLeg;})();const rotChk=el.querySelector("[data-rot]"),prEl=el.querySelector("[data-pr]");
 const paint=()=>{prEl.innerHTML=fmt(rotChk&&rotChk.checked?p.costRot:p.cost);};paint();
 if(rotChk)rotChk.onchange=()=>{paint();syncCtrl();};
