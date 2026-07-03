@@ -107,6 +107,10 @@ app.get('/admin/portfolio', requireAuth, (req, res) => {
   res.send(adminLayout('portfolio'));
 });
 
+app.get('/admin/reviews', requireAuth, (req, res) => {
+  res.send(adminLayout('reviews'));
+});
+
 app.get('/admin/faq', requireAuth, (req, res) => {
   res.send(adminLayout('faq'));
 });
@@ -151,6 +155,7 @@ function adminLayout(page) {
     products: { title: 'Каталог товаров', icon: '🛋️' },
     categories: { title: 'Категории', icon: '🗂️' },
     portfolio: { title: 'Наши работы', icon: '🖼️' },
+    reviews: { title: 'Отзывы', icon: '⭐' },
     faq: { title: 'Частые вопросы', icon: '❓' },
     settings: { title: 'Настройки сайта', icon: '⚙️' },
     seo: { title: 'SEO', icon: '🔍' },
