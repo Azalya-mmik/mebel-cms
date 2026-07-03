@@ -9,6 +9,7 @@ const { initDb, getDb } = require('./db/init');
 const s3sync = require('./db/s3sync');
 const authRouter = require('./routes/auth');
 const apiRouter = require('./routes/api');
+const hockeyRouter = require('./routes/hockey');
 const trackVisit = require('./middleware/tracker');
 const { requireAuth } = require('./middleware/auth');
 
@@ -71,12 +72,18 @@ app.use('/api', (req, res, next) => {
 });
 app.use('/api', require('./routes/public')); // публичный API сайта (без авторизации)
 app.use('/api', apiRouter);                  // админ API (требует логина)
+app.use('/api/hockey', requireAuth, hockeyRouter); // личный дневник хоккеиста
 
 // Публичный приём заявок теперь через POST /api/public/lead (см. routes/public.js)
 
 // Страница предпросмотра (live preview с флагом preview=1)
 app.get('/preview', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Личный дневник хоккеиста (закрыт тем же логином, что и /admin)
+app.get('/hockey', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'hockey.html'));
 });
 
 // ─── ГЛАВНАЯ СТРАНИЦА АДМИНКИ ─────────────────────────────────────────────────
