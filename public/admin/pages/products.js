@@ -1,15 +1,22 @@
 // Каталог товаров R&T
 let allProducts = [];
+let CATS = [];
 let editingId = null;
-
-const CATS = ['Табуреты', 'Стулья', 'Банкетки', 'Прочее'];
 const ST = { available: 'В наличии', order: 'Нет в наличии', hidden: 'Скрыт' };
 
 $('pageActions').innerHTML = `
   <button class="btn btn-accent" onclick="openAddModal()">+ Добавить товар</button>
 `;
 
-$('content').innerHTML = `
+async function initProductsPage() {
+  try {
+    const cats = await api('GET', '/api/categories');
+    CATS = cats.map(c => c.name);
+  } catch (e) {
+    CATS = ['Прочее']; // на случай сбоя API — форма всё равно останется рабочей
+  }
+
+  $('content').innerHTML = `
   <div class="filter-bar">
     <input type="text" id="searchInput" placeholder="🔍 Поиск по названию..." oninput="filterProducts()">
     <select id="catFilter" onchange="filterProducts()">
@@ -51,8 +58,9 @@ $('content').innerHTML = `
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Категория</label>
+            <label>Категория ${CATS.length ? '' : '<span style="color:#e53e3e">(сначала создайте категорию)</span>'}</label>
             <select id="pCategory">${CATS.map(c => `<option value="${c}">${c}</option>`).join('')}</select>
+            <a href="/admin/categories" style="font-size:12px;display:inline-block;margin-top:4px">+ Новая категория</a>
           </div>
           <div class="form-group">
             <label>Наличие</label>
@@ -105,6 +113,9 @@ $('content').innerHTML = `
     </div>
   </div>
 `;
+
+  loadProducts();
+}
 
 function parseList(v) { try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
 function firstImg(p) {
@@ -172,7 +183,7 @@ function openAddModal() {
   $('pSpecs').value = '';
   $('pColors').value = '';
   $('pDesc').value = '';
-  $('pCategory').value = 'Табуреты';
+  $('pCategory').value = CATS[0] || '';
   $('pStatus').value = 'available';
   $('imgPreview').innerHTML = '<div class="upload-icon">📷</div><p>Нажмите для загрузки</p>';
   openModal('productModal');
@@ -189,7 +200,10 @@ function editProduct(id) {
   $('pSpecs').value = parseList(p.specs).join('\n');
   $('pColors').value = parseList(p.colors).join('\n');
   $('pDesc').value = p.description || '';
-  $('pCategory').value = CATS.includes(p.category) ? p.category : 'Прочее';
+  if (p.category && !CATS.includes(p.category)) {
+    $('pCategory').insertAdjacentHTML('afterbegin', `<option value="${p.category}">${p.category} (нет в списке)</option>`);
+  }
+  $('pCategory').value = p.category || CATS[0] || '';
   $('pStatus').value = p.status;
   const img = firstImg(p);
   $('imgPreview').innerHTML = img
@@ -275,4 +289,4 @@ async function deleteProduct(id) {
   }
 }
 
-loadProducts();
+initProductsPage();
