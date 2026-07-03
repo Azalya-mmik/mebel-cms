@@ -2,6 +2,9 @@
 let allProducts = [];
 let CATS = [];
 let editingId = null;
+let editingImages = [];      // фото уже сохранённого товара (URL с сервера)
+let pendingFiles = [];       // фото для нового товара, ещё не сохранённого (File)
+let pendingPreviews = [];    // локальные превью для pendingFiles (data URL)
 const ST = { available: 'В наличии', order: 'Нет в наличии', hidden: 'Скрыт' };
 
 $('pageActions').innerHTML = `
@@ -40,10 +43,11 @@ async function initProductsPage() {
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>Фото товара</label>
+          <label>Фото товара — можно несколько, первое считается главным (показывается в каталоге)</label>
+          <div id="photoGallery" style="display:flex;flex-wrap:wrap;margin-bottom:8px"></div>
           <div class="upload-area" onclick="document.getElementById('imgFile').click()">
-            <input type="file" id="imgFile" accept="image/*" onchange="previewImg(this)">
-            <div id="imgPreview"><div class="upload-icon">📷</div><p>Нажмите для загрузки (JPG/PNG/WEBP)</p></div>
+            <input type="file" id="imgFile" accept="image/*" multiple onchange="handlePhotoSelect(this)">
+            <div class="upload-icon">📷</div><p>Нажмите, чтобы добавить фото (можно выбрать сразу несколько, JPG/PNG/WEBP)</p>
           </div>
         </div>
         <div class="form-row">
@@ -94,24 +98,6 @@ async function initProductsPage() {
       </div>
     </div>
   </div>
-
-  <div class="modal-overlay" id="imgModal">
-    <div class="modal" style="max-width:400px">
-      <div class="modal-header"><h3>Загрузить фото</h3><button class="modal-close" onclick="closeModal('imgModal')">✕</button></div>
-      <div class="modal-body">
-        <div class="upload-area" onclick="document.getElementById('imgFile2').click()">
-          <input type="file" id="imgFile2" accept="image/*">
-          <div class="upload-icon">📷</div>
-          <p>Нажмите для выбора файла</p>
-        </div>
-        <input type="hidden" id="imgProductId">
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeModal('imgModal')">Отмена</button>
-        <button class="btn btn-primary" onclick="uploadProductImage()">Загрузить</button>
-      </div>
-    </div>
-  </div>
 `;
 
   loadProducts();
@@ -157,9 +143,9 @@ function renderProducts(products) {
     const img = firstImg(p);
     return `
     <div class="product-card">
-      <div class="product-img" onclick="openImgModal(${p.id})">
+      <div class="product-img" onclick="editProduct(${p.id})">
         ${img ? `<img src="${img}" alt="${p.name}">` : '<div class="no-img">🪑</div>'}
-        <div style="position:absolute;bottom:6px;right:6px;background:#0007;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">📷 Заменить</div>
+        <div style="position:absolute;bottom:6px;right:6px;background:#0007;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px">✏️ Фото (${parseList(p.images).length || (img ? 1 : 0)})</div>
       </div>
       <div class="product-body">
         <div class="product-name">${p.name}</div>
@@ -185,7 +171,10 @@ function openAddModal() {
   $('pDesc').value = '';
   $('pCategory').value = CATS[0] || '';
   $('pStatus').value = 'available';
-  $('imgPreview').innerHTML = '<div class="upload-icon">📷</div><p>Нажмите для загрузки</p>';
+  editingImages = [];
+  pendingFiles = [];
+  pendingPreviews = [];
+  renderGallery();
   openModal('productModal');
 }
 
@@ -205,10 +194,11 @@ function editProduct(id) {
   }
   $('pCategory').value = p.category || CATS[0] || '';
   $('pStatus').value = p.status;
-  const img = firstImg(p);
-  $('imgPreview').innerHTML = img
-    ? `<img src="${img}" style="max-height:120px;border-radius:8px">`
-    : '<div class="upload-icon">📷</div><p>Нажмите для загрузки</p>';
+  editingImages = parseList(p.images);
+  if (!editingImages.length && p.image) editingImages = [p.image];
+  pendingFiles = [];
+  pendingPreviews = [];
+  renderGallery();
   openModal('productModal');
 }
 
@@ -228,13 +218,10 @@ async function saveProduct() {
   try {
     if (editingId) {
       await api('PUT', `/api/products/${editingId}`, data);
-      const file = $('imgFile').files[0];
-      if (file) await uploadImg(editingId, file);
       toast('Товар обновлён', 'success');
     } else {
       const res = await api('POST', '/api/products', data);
-      const file = $('imgFile').files[0];
-      if (file && res.id) await uploadImg(res.id, file);
+      if (pendingFiles.length && res.id) await uploadFiles(res.id, pendingFiles);
       toast('Товар добавлен', 'success');
     }
     closeModal('productModal');
@@ -244,38 +231,103 @@ async function saveProduct() {
   }
 }
 
-async function uploadImg(id, file) {
+async function uploadFiles(id, files) {
   const fd = new FormData();
-  fd.append('image', file);
+  files.forEach(f => fd.append('image', f));
   const res = await fetch(`/api/products/${id}/image`, { method: 'POST', body: fd });
-  if (!res.ok) throw new Error('Ошибка загрузки фото');
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Ошибка загрузки фото');
+  return json.images || [];
 }
 
-function previewImg(input) {
-  if (!input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => { $('imgPreview').innerHTML = `<img src="${e.target.result}" style="max-height:120px;border-radius:8px">`; };
-  reader.readAsDataURL(input.files[0]);
+function fileToDataUrl(file) {
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onload = e => resolve(e.target.result);
+    r.readAsDataURL(file);
+  });
 }
 
-function openImgModal(id) {
-  $('imgProductId').value = id;
-  $('imgFile2').value = '';
-  openModal('imgModal');
+async function handlePhotoSelect(input) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (!files.length) return;
+  if (editingId) {
+    try {
+      editingImages = await uploadFiles(editingId, files);
+      renderGallery();
+      toast('Фото добавлено', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  } else {
+    for (const f of files) {
+      pendingFiles.push(f);
+      pendingPreviews.push(await fileToDataUrl(f));
+    }
+    renderGallery();
+  }
 }
 
-async function uploadProductImage() {
-  const id = $('imgProductId').value;
-  const file = $('imgFile2').files[0];
-  if (!file) { toast('Выберите файл', 'error'); return; }
+function photoThumb(src, isMain, onMain, onRemove) {
+  return `<div style="position:relative;margin:0 8px 8px 0">
+    <img src="${src}" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:${isMain ? '3px solid #276749' : '1px solid var(--border,#ddd)'}">
+    ${isMain ? '<div style="position:absolute;top:3px;left:3px;background:#276749;color:#fff;font-size:10px;padding:1px 6px;border-radius:6px">Главное</div>' : ''}
+    <div style="display:flex;gap:4px;margin-top:4px">
+      ${isMain ? '' : `<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" onclick="${onMain}">★ Главное</button>`}
+      <button type="button" class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:11px" onclick="${onRemove}">✕</button>
+    </div>
+  </div>`;
+}
+
+function renderGallery() {
+  const box = $('photoGallery');
+  if (!box) return;
+  if (editingId) {
+    box.innerHTML = editingImages.length
+      ? editingImages.map((url, i) => photoThumb(url, i === 0, `makeMainPhoto(${i})`, `removePhoto(${i})`)).join('')
+      : '<p style="color:var(--text-muted);font-size:13px">Фото пока нет</p>';
+  } else {
+    box.innerHTML = pendingPreviews.length
+      ? pendingPreviews.map((src, i) => photoThumb(src, i === 0, `makeMainPending(${i})`, `removePending(${i})`)).join('')
+      : '<p style="color:var(--text-muted);font-size:13px">Фото добавятся после сохранения товара</p>';
+  }
+}
+
+async function removePhoto(i) {
+  const newArr = editingImages.filter((_, idx) => idx !== i);
   try {
-    await uploadImg(id, file);
-    toast('Фото загружено', 'success');
-    closeModal('imgModal');
-    loadProducts();
+    await api('PUT', `/api/products/${editingId}/images`, { images: newArr });
+    editingImages = newArr;
+    renderGallery();
   } catch (e) {
     toast(e.message, 'error');
   }
+}
+
+async function makeMainPhoto(i) {
+  const arr = editingImages.slice();
+  const [item] = arr.splice(i, 1);
+  arr.unshift(item);
+  try {
+    await api('PUT', `/api/products/${editingId}/images`, { images: arr });
+    editingImages = arr;
+    renderGallery();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function removePending(i) {
+  pendingFiles.splice(i, 1);
+  pendingPreviews.splice(i, 1);
+  renderGallery();
+}
+
+function makeMainPending(i) {
+  const [f] = pendingFiles.splice(i, 1); pendingFiles.unshift(f);
+  const [p] = pendingPreviews.splice(i, 1); pendingPreviews.unshift(p);
+  renderGallery();
 }
 
 async function deleteProduct(id) {
