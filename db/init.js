@@ -174,7 +174,10 @@ function initDb() {
     ['coef_mdf', 'Коэф. МДФ', 0.7],
     ['coef_premium', 'Коэф. премиум фурнитура', 1.3],
     ['coef_standard', 'Коэф. стандарт фурнитура', 1.0],
-    ['delivery_base', 'Базовая стоимость доставки', 1500],
+    ['delivery_base', 'Доставка кровати (или комплекта), ₽', 1500],
+    ['chair_delivery', 'Доставка за 1 стул/табурет, ₽', 200],
+    ['chair_free_from', 'Бесплатная доставка стульев от, шт', 4],
+    ['banketka_delivery', 'Доставка за 1 банкетку, ₽', 300],
   ];
 
   const insertCalc = db.prepare(
@@ -183,6 +186,8 @@ function initDb() {
   for (const [id, label, value] of calcDefaults) {
     insertCalc.run(id, label, value);
   }
+  // Уточняем название уже существующего поля (для баз, созданных до этого обновления)
+  db.prepare("UPDATE calculator SET label='Доставка кровати (или комплекта), ₽' WHERE id='delivery_base' AND label='Базовая стоимость доставки'").run();
 
   // Стартовые вопросы FAQ (добавляются один раз, если таблица пуста)
   const faqCount = db.prepare('SELECT COUNT(*) as c FROM faq').get();
