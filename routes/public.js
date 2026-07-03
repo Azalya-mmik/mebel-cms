@@ -22,7 +22,7 @@ router.get('/public/config', (req, res) => {
       .all();
 
     const categories = db
-      .prepare('SELECT name, slug, cover_image FROM categories WHERE active=1 ORDER BY sort_order, id')
+      .prepare('SELECT name, slug, cover_image, delivery_price, delivery_free_from FROM categories WHERE active=1 ORDER BY sort_order, id')
       .all();
 
     const reviews = db
@@ -36,7 +36,7 @@ router.get('/public/config', (req, res) => {
       bed: calc.delivery_base != null ? calc.delivery_base : 1500,
       chair: calc.chair_delivery != null ? calc.chair_delivery : 200,
       chairFreeFrom: calc.chair_free_from != null ? calc.chair_free_from : 4,
-      banketka: calc.banketka_delivery != null ? calc.banketka_delivery : 300,
+      freeFromOrderTotal: calc.free_delivery_order_total != null ? calc.free_delivery_order_total : 0,
     };
 
     res.json({ settings, faq, portfolio, categories, reviews, delivery });
