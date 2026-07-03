@@ -12,14 +12,9 @@ const apiRouter = require('./routes/api');
 const trackVisit = require('./middleware/tracker');
 const { requireAuth } = require('./middleware/auth');
 
-// Инициализация БД
-// Инициализация БД и старт сервера — в конце файла (после восстановления из S3)
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Каталог для данных, которые должны переживать редеплой (БД, сессии, загрузки).
-// На Timeweb App Platform задай DATA_DIR=/data и примонтируй туда сетевой диск.
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 for (const d of [path.join(DATA_DIR, 'db'), path.join(DATA_DIR, 'public', 'uploads')]) {
   try { fs.mkdirSync(d, { recursive: true }); } catch (e) {}
@@ -33,106 +28,63 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(fileUpload({
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   createParentPath: true,
   abortOnLimit: true
 }));
 
-// Сессии
 app.use(session({
-  // Хранилище сессий — в памяти (после редеплоя нужно заново войти в /admin).
-  // Так нет нативной зависимости sqlite3 → сборка на App Platform не падает.
   secret: process.env.SESSION_SECRET || 'fallback_secret_change_me',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // SSL не подключён на Timeweb
+    secure: false, // Timeweb App Platform — SSL терминируется на прокси, не в Node.js
     sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 дней
+    maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
 
-// Трекинг посещений
 app.use(trackVisit);
-
-// Статика
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(DATA_DIR, 'public', 'uploads')));
 
 // ─── РОУТЫ ────────────────────────────────────────────────────────────────────
 app.use('/admin', authRouter);
-// Любой изменяющий запрос к API → пометить базу на выгрузку в S3
 app.use('/api', (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.on('finish', () => { if (res.statusCode < 400) s3sync.markDirty(); });
   }
   next();
 });
-app.use('/api', require('./routes/public')); // публичный API сайта (без авторизации)
-app.use('/api', apiRouter);                  // админ API (требует логина)
+app.use('/api', require('./routes/public'));
+app.use('/api', apiRouter);
 
-// Публичный приём заявок теперь через POST /api/public/lead (см. routes/public.js)
-
-// Страница предпросмотра (live preview с флагом preview=1)
 app.get('/preview', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ─── ГЛАВНАЯ СТРАНИЦА АДМИНКИ ─────────────────────────────────────────────────
-app.get('/admin', requireAuth, (req, res) => {
-  res.send(adminLayout('dashboard'));
-});
+app.get('/admin', requireAuth, (req, res) => { res.send(adminLayout('dashboard')); });
+app.get('/admin/products', requireAuth, (req, res) => { res.send(adminLayout('products')); });
+app.get('/admin/leads', requireAuth, (req, res) => { res.send(adminLayout('leads')); });
+app.get('/admin/settings', requireAuth, (req, res) => { res.send(adminLayout('settings')); });
+app.get('/admin/backup', requireAuth, (req, res) => { res.send(adminLayout('backup')); });
+app.get('/admin/portfolio', requireAuth, (req, res) => { res.send(adminLayout('portfolio')); });
+app.get('/admin/faq', requireAuth, (req, res) => { res.send(adminLayout('faq')); });
+app.get('/admin/seo', requireAuth, (req, res) => { res.send(adminLayout('seo')); });
+app.get('/admin/calculator', requireAuth, (req, res) => { res.send(adminLayout('calculator')); });
+app.get('/admin/log', requireAuth, (req, res) => { res.send(adminLayout('log')); });
+app.get('/admin/promos', requireAuth, (req, res) => { res.send(adminLayout('promos')); });
 
-app.get('/admin/products', requireAuth, (req, res) => {
-  res.send(adminLayout('products'));
-});
-
-app.get('/admin/leads', requireAuth, (req, res) => {
-  res.send(adminLayout('leads'));
-});
-
-app.get('/admin/settings', requireAuth, (req, res) => {
-  res.send(adminLayout('settings'));
-});
-
-app.get('/admin/backup', requireAuth, (req, res) => {
-  res.send(adminLayout('backup'));
-});
-
-app.get('/admin/portfolio', requireAuth, (req, res) => {
-  res.send(adminLayout('portfolio'));
-});
-
-app.get('/admin/faq', requireAuth, (req, res) => {
-  res.send(adminLayout('faq'));
-});
-
-app.get('/admin/seo', requireAuth, (req, res) => {
-  res.send(adminLayout('seo'));
-});
-
-app.get('/admin/calculator', requireAuth, (req, res) => {
-  res.send(adminLayout('calculator'));
-});
-
-app.get('/admin/log', requireAuth, (req, res) => {
-  res.send(adminLayout('log'));
-});
-
-// ─── 404 ─────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
-  if (req.path.startsWith('/api')) {
-    return res.status(404).json({ error: 'Не найдено' });
-  }
+  if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Не найдено' });
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ─── СТАРТ ────────────────────────────────────────────────────────────────────
 (async () => {
-  await s3sync.restoreOnBoot();   // скачать базу из S3 (если есть)
-  initDb();                       // открыть/создать базу (+ засеять каталог при первом запуске)
-  s3sync.start(getDb);            // включить авто-выгрузку в S3
-  s3sync.markDirty();             // закрепить засеянный каталог в S3 сразу после старта
+  await s3sync.restoreOnBoot();
+  initDb();
+  s3sync.start(getDb);
+  s3sync.markDirty();
   app.listen(PORT, () => {
     console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);
     console.log(`🔐 Админка: http://localhost:${PORT}/admin`);
@@ -152,6 +104,7 @@ function adminLayout(page) {
     calculator: { title: 'Калькулятор', icon: '🧮' },
     backup: { title: 'Бэкап', icon: '💾' },
     log: { title: 'Журнал действий', icon: '📝' },
+    promos: { title: 'Партнёры', icon: '🤝' },
   };
 
   const nav = Object.entries(pages).map(([key, info]) => `
