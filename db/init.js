@@ -177,7 +177,7 @@ function initDb() {
     ['delivery_base', 'Доставка кровати (или комплекта), ₽', 1500],
     ['chair_delivery', 'Доставка за 1 стул/табурет, ₽', 200],
     ['chair_free_from', 'Бесплатная доставка стульев от, шт', 4],
-    ['banketka_delivery', 'Доставка за 1 банкетку, ₽', 300],
+    ['free_delivery_order_total', 'Бесплатная доставка при заказе от, ₽ (0 — отключено)', 0],
   ];
 
   const insertCalc = db.prepare(
@@ -188,6 +188,8 @@ function initDb() {
   }
   // Уточняем название уже существующего поля (для баз, созданных до этого обновления)
   db.prepare("UPDATE calculator SET label='Доставка кровати (или комплекта), ₽' WHERE id='delivery_base' AND label='Базовая стоимость доставки'").run();
+  // Доставка банкеток переехала в карточку категории — убираем дублирующее поле из калькулятора
+  db.prepare("DELETE FROM calculator WHERE id='banketka_delivery'").run();
 
   // Стартовые вопросы FAQ (добавляются один раз, если таблица пуста)
   const faqCount = db.prepare('SELECT COUNT(*) as c FROM faq').get();
@@ -222,6 +224,14 @@ function initDb() {
   addCol('specs', 'TEXT');      // JSON-массив строк
   addCol('images', 'TEXT');     // JSON-массив data-URI/URL
   addCol('cost_rot', 'INTEGER');// доп. цена (поворотный механизм и т.п.), может быть NULL
+
+  // ── Категории: доставка за единицу товара + порог бесплатной доставки (миграция) ──
+  const catCols = db.prepare("PRAGMA table_info(categories)").all().map(c => c.name);
+  const addCatCol = (name, def) => { if (!catCols.includes(name)) db.exec(`ALTER TABLE categories ADD COLUMN ${name} ${def}`); };
+  addCatCol('delivery_price', 'INTEGER DEFAULT 0');   // ₽ за 1 шт этой категории
+  addCatCol('delivery_free_from', 'INTEGER');         // от скольких штук доставка бесплатна (NULL — никогда сама по себе)
+  // Для уже существующей категории «Банкетки» переносим прежнее зашитое значение (300 ₽/шт), если ещё не задано
+  db.prepare("UPDATE categories SET delivery_price=300 WHERE name='Банкетки' AND delivery_price=0").run();
 
   // ── Стартовый каталог R&T (15 товаров) — заливаем один раз ──
   const catV = db.prepare("SELECT value FROM settings WHERE key='catalog_v'").get();
