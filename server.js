@@ -58,7 +58,77 @@ app.use(session({
 app.use(trackVisit);
 
 // Статика
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+
+// ─── ДИНАМИЧЕСКИЙ SEO ДЛЯ ГЛАВНОЙ HTML-СТРАНИЦЫ ────────────────────────────────
+// Подставляет title/description/keywords, сохранённые в админке (/admin/seo),
+// а также meta-тег подтверждения Яндекс.Вебмастера и счётчик Яндекс.Метрики
+// (задаются в /admin/settings), в HTML при каждой раздаче index.html.
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderIndexHtml(pagePath) {
+  const db = getDb();
+  const seoRow = db.prepare('SELECT * FROM seo WHERE page = ?').get(pagePath) || {};
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all();
+  const settings = {};
+  settingsRows.forEach(r => { settings[r.key] = r.value; });
+
+  let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+
+  if (seoRow.title) {
+    html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(seoRow.title)}</title>`);
+  }
+
+  const metaTags = [
+    seoRow.description ? `<meta name="description" content="${escapeHtml(seoRow.description)}">` : '',
+    seoRow.keywords ? `<meta name="keywords" content="${escapeHtml(seoRow.keywords)}">` : '',
+    settings.yandex_verification ? `<meta name="yandex-verification" content="${escapeHtml(settings.yandex_verification)}">` : ''
+  ].filter(Boolean).join('\n');
+
+  const metrikaId = settings.yandex_metrika_id;
+  const metrikaScript = metrikaId ? `
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+   m[i].l=1*new Date();
+   for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+   (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+   ym(${JSON.stringify(metrikaId)}, "init", {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/${encodeURIComponent(metrikaId)}" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->` : '';
+
+  html = html.replace('</head>', `${metaTags}\n${metrikaScript}\n</head>`);
+  return html;
+}
+
+app.get('/', (req, res) => {
+  res.send(renderIndexHtml('/'));
+});
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(
+`User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+
+Sitemap: https://${req.get('host')}/sitemap.xml`
+  );
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const host = `https://${req.get('host')}`;
+  const urls = ['/'];
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url><loc>${host}${u}</loc></url>`).join('\n')}
+</urlset>`;
+  res.type('application/xml').send(xml);
+});
 app.use('/uploads', express.static(path.join(DATA_DIR, 'public', 'uploads')));
 
 // ─── РОУТЫ ────────────────────────────────────────────────────────────────────
@@ -144,7 +214,7 @@ app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Не найдено' });
   }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.send(renderIndexHtml(req.path));
 });
 
 // ─── СТАРТ ────────────────────────────────────────────────────────────────────
