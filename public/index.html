@@ -224,8 +224,15 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
   <div id="vCart" style="display:none">
     <div class="cart-h">Корзина</div>
     <div id="cartList"></div>
-    <div id="cartSummary"><div class="cdelivery" id="cartDelivery" style="display:none"></div><div class="total"><span>Итого</span><span id="cartTotal">0 ₽</span></div></div>
+    <div id="cartSummary"><div class="cdelivery" id="cartDelivery" style="display:none"></div><div class="cdelivery" id="cartPromoLine" style="display:none"></div><div class="total"><span>Итого</span><span id="cartTotal">0 ₽</span></div></div>
     <div id="cartForm">
+    <div class="field"><label>Промокод партнёра (если есть)</label>
+      <div style="display:flex;gap:8px">
+        <input id="cPromo" placeholder="Например: MARAT10" style="flex:1;text-transform:uppercase">
+        <button type="button" class="lp-btn alt" style="padding:13px 18px;white-space:nowrap" onclick="applyPromo()">Применить</button>
+      </div>
+      <div id="promoMsg" style="font-size:12.5px;font-weight:700;margin-top:6px"></div>
+    </div>
     <div class="field"><label>Ваше имя</label><input id="cName" placeholder="Как к вам обращаться"></div>
     <div class="field"><label>Телефон</label><input id="cPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="+7 ___ ___-__-__"></div>
     <div class="field"><label>Адрес доставки</label><input id="cAddr" autocomplete="street-address" placeholder="Город, улица, дом, квартира"></div><div class="field"><label>Комментарий (удобное время и т.п.)</label><textarea id="cNote"></textarea></div>
@@ -432,6 +439,26 @@ buildBeds();
 /* ----- CART ----- */
 function entries(){return Object.keys(cart).map(k=>({k,...cart[k]}));}
 function totals(){let c=0,s=0;entries().forEach(e=>{c+=e.qty;s+=e.qty*e.price;});return{c,s};}var DELIVERY_CFG={bed:1500,chair:200,chairFreeFrom:4,freeFromOrderTotal:0};
+var appliedPromo=null; // {code, discount_percent} — устанавливается функцией applyPromo()
+function promoDiscount(goodsTotal){return appliedPromo?Math.round(goodsTotal*appliedPromo.discount_percent/100):0;}
+function applyPromo(){
+  var input=document.getElementById("cPromo"),msg=document.getElementById("promoMsg");
+  var code=input.value.trim();
+  if(!code){appliedPromo=null;msg.textContent="";renderCart();updateBar();return;}
+  msg.style.color="var(--muted)";msg.textContent="Проверяем…";
+  fetch("/api/public/promo/check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:code})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.valid){
+        appliedPromo={code:code.toUpperCase(),discount_percent:d.discount_percent};
+        msg.style.color="#1f9d57";msg.textContent="✓ Промокод применён — скидка "+d.discount_percent+"%";
+      }else{
+        appliedPromo=null;msg.style.color="#c0392b";msg.textContent="Промокод не найден или недействителен";
+      }
+      renderCart();updateBar();
+    })
+    .catch(function(){appliedPromo=null;msg.style.color="#c0392b";msg.textContent="Не удалось проверить код — попробуйте ещё раз";renderCart();updateBar();});
+}
 var CATEGORY_DELIVERY={"Банкетки":{price:300,freeFrom:null}};
 function applyOrderFree(res){
   if(DELIVERY_CFG.freeFromOrderTotal>0&&totals().s>=DELIVERY_CFG.freeFromOrderTotal)return{fee:0,label:res.label};
@@ -464,7 +491,7 @@ function delivery(){
 }
 function plural(n){const a=n%10,b=n%100;let w="позиций";if(a===1&&b!==11)w="позиция";else if(a>=2&&a<=4&&(b<10||b>=20))w="позиции";return n+" "+w;}
 function updateBar(){const{c,s}=totals(),bar=document.getElementById("cartbar"),badge=document.getElementById("cartBadge");
- if(c>0){bar.classList.add("show");document.getElementById("cbCount").textContent=plural(c);var _d=delivery();document.getElementById("cbSum").textContent=fmt(s+(_d?_d.fee:0));badge.textContent=c;badge.classList.add("show");}
+ if(c>0){bar.classList.add("show");document.getElementById("cbCount").textContent=plural(c);var _d=delivery();document.getElementById("cbSum").textContent=fmt(s-promoDiscount(s)+(_d?_d.fee:0));badge.textContent=c;badge.classList.add("show");}
  else{bar.classList.remove("show");badge.classList.remove("show");}
  if(document.getElementById("vCart").style.display!=="none")renderCart();}
 function refreshGrids(){if(document.getElementById("vChairs").style.display!=="none")renderChairs();if(document.getElementById("vBanketki").style.display!=="none")renderBanketki();if(document.getElementById("vCatalog").style.display!=="none")renderCatalog();}
@@ -477,16 +504,23 @@ function renderCart(){const items=entries(),list=document.getElementById("cartLi
   row.querySelector(".cp").onclick=()=>{cart[e.k].qty++;updateBar();renderCart();};
   row.querySelector(".crm").onclick=()=>{delete cart[e.k];updateBar();refreshGrids();renderCart();};
   list.appendChild(row);});
- var _dl=delivery(),_dv=document.getElementById("cartDelivery");if(_dl){_dv.style.display="";_dv.innerHTML='<span>'+_dl.label+'</span><b'+(_dl.fee>0?'':' style="color:#1f9d57"')+'>'+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+'</b>';}else{_dv.style.display="none";}document.getElementById("cartTotal").textContent=fmt(totals().s+(_dl?_dl.fee:0));buildLinks();}
+ var _dl=delivery(),_dv=document.getElementById("cartDelivery");if(_dl){_dv.style.display="";_dv.innerHTML='<span>'+_dl.label+'</span><b'+(_dl.fee>0?'':' style="color:#1f9d57"')+'>'+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+'</b>';}else{_dv.style.display="none";}
+ var _s=totals().s,_disc=promoDiscount(_s),_pl=document.getElementById("cartPromoLine");
+ if(_disc>0){_pl.style.display="";_pl.innerHTML='<span>Скидка по промокоду '+appliedPromo.code+' ('+appliedPromo.discount_percent+'%)</span><b style="color:#1f9d57">−'+fmt(_disc)+'</b>';}else{_pl.style.display="none";}
+ document.getElementById("cartTotal").textContent=fmt(_s-_disc+(_dl?_dl.fee:0));buildLinks();}
 function orderText(){let t="Здравствуйте! Хочу заказать:\n";entries().forEach(e=>{t+="• "+e.name+(e.sub?" ("+e.sub+")":"")+" — "+e.qty+" шт. ("+(e.price>0?fmt(e.qty*e.price):"цена по запросу")+")\n";});
- var _dl=delivery();if(_dl)t+="• "+_dl.label+" — "+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+"\n";t+="Итого: "+fmt(totals().s+(_dl?_dl.fee:0));const n=document.getElementById("cName").value.trim(),ph=document.getElementById("cPhone").value.trim(),ad=(document.getElementById("cAddr")?document.getElementById("cAddr").value.trim():""),nt=document.getElementById("cNote").value.trim();
+ var _dl=delivery();if(_dl)t+="• "+_dl.label+" — "+(_dl.fee>0?fmt(_dl.fee):"бесплатно")+"\n";
+ var _s=totals().s,_disc=promoDiscount(_s);
+ if(_disc>0)t+="• Промокод "+appliedPromo.code+" — скидка "+appliedPromo.discount_percent+"% (−"+fmt(_disc)+")\n";
+ t+="Итого: "+fmt(_s-_disc+(_dl?_dl.fee:0));const n=document.getElementById("cName").value.trim(),ph=document.getElementById("cPhone").value.trim(),ad=(document.getElementById("cAddr")?document.getElementById("cAddr").value.trim():""),nt=document.getElementById("cNote").value.trim();
  if(n)t+="\nИмя: "+n;if(ph)t+="\nТелефон: "+ph;if(ad)t+="\nАдрес: "+ad;if(nt)t+="\nКомментарий: "+nt;return t;}
 function buildLinks(){var c=document.getElementById("bCall");if(c)c.href="tel:"+CONFIG.phone;}function xsellOpen(){document.getElementById("xsell").classList.add("show");}function xsellClose(){document.getElementById("xsell").classList.remove("show");}function xsellGo(){xsellClose();showMatras();}function xsellCart(){xsellClose();showCart();}
 ["cName","cPhone","cAddr","cNote"].forEach(id=>{var _e=document.getElementById(id);if(_e)_e.addEventListener("input",buildLinks);});
 function attachPhoneMask(id){var ph=document.getElementById(id);if(!ph)return;function f(v){var d=v.replace(/\D/g,"");if(d&&d[0]==="8")d="7"+d.slice(1);if(d&&d[0]!=="7")d="7"+d;d=d.slice(0,11);var r="+7";if(d.length>1)r+=" "+d.slice(1,4);if(d.length>=4)r+=" "+d.slice(4,7);if(d.length>=7)r+="-"+d.slice(7,9);if(d.length>=9)r+="-"+d.slice(9,11);return r;}ph.addEventListener("focus",function(){if(!ph.value)ph.value="+7 ";});ph.addEventListener("input",function(){ph.value=f(ph.value);});ph.addEventListener("blur",function(){if(ph.value.replace(/\D/g,"").length<=1)ph.value="";});}
 attachPhoneMask("cPhone");attachPhoneMask("lPhone");
+(function(){var pi=document.getElementById("cPromo");if(pi)pi.addEventListener("input",function(){var s=pi.selectionStart;pi.value=pi.value.toUpperCase();try{pi.setSelectionRange(s,s);}catch(e){}});})();
 function copyTxt(t){var d=false;try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);d=true;}}catch(e){}if(!d){try{var a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.position="fixed";a.style.top="-1000px";document.body.appendChild(a);a.focus();a.select();try{a.setSelectionRange(0,t.length);}catch(e){}document.execCommand("copy");document.body.removeChild(a);}catch(e){}}}
-function submitLead(){var phone=document.getElementById("cPhone").value.trim();var name=document.getElementById("cName").value.trim();if(!phone&&!name){toast("Укажите телефон или имя");var f=document.getElementById("cPhone");if(f)f.focus();return;}var msg=orderText();var btn=document.getElementById("bSend");var old=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="Отправляем…";}fetch("/api/public/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name,phone:phone,message:msg,source:"Сайт R&T"})}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(){toast("Заявка отправлена! Мы свяжемся с вами");Object.keys(cart).forEach(function(k){delete cart[k];});updateBar();renderCart();setTimeout(showHome,800);}).catch(function(){copyTxt(orderText());toast("Не удалось отправить — заявка скопирована, позвоните или напишите нам");}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});}
+function submitLead(){var phone=document.getElementById("cPhone").value.trim();var name=document.getElementById("cName").value.trim();if(!phone&&!name){toast("Укажите телефон или имя");var f=document.getElementById("cPhone");if(f)f.focus();return;}var msg=orderText();var btn=document.getElementById("bSend");var old=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="Отправляем…";}fetch("/api/public/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name,phone:phone,message:msg,source:"Сайт R&T",promo_code:appliedPromo?appliedPromo.code:""})}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(){toast("Заявка отправлена! Мы свяжемся с вами");Object.keys(cart).forEach(function(k){delete cart[k];});appliedPromo=null;var pi=document.getElementById("cPromo");if(pi)pi.value="";var pm=document.getElementById("promoMsg");if(pm)pm.textContent="";updateBar();renderCart();setTimeout(showHome,800);}).catch(function(){copyTxt(orderText());toast("Не удалось отправить — заявка скопирована, позвоните или напишите нам");}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});}
 function sendVK(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(CONFIG.vk,"_blank");},450);}function sendTG(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(CONFIG.telegram||"https://t.me/MVildi","_blank");},450);}
 function sendMAX(){var txt=orderText();copyTxt(txt);var u=CONFIG.max||"";if(u&&u.indexOf("ВАШ_")<0){toast("Заявка скопирована — вставьте её в чат и отправьте");setTimeout(function(){window.open(u,"_blank");},450);}else{toast("Заявка скопирована — откройте MAX и вставьте");}}
 function sendSMS(){var txt=orderText();copyTxt(txt);toast("Заявка скопирована — открываю SMS");setTimeout(function(){window.location.href="sms:"+CONFIG.phone+"?&body="+encodeURIComponent(txt);},350);}
