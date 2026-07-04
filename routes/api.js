@@ -278,6 +278,64 @@ router.post('/categories/:id/image', (req, res) => {
   });
 });
 
+// ─── ПРОМОКОДЫ ПАРТНЁРОВ ──────────────────────────────────────────────────────
+router.get('/promocodes', (req, res) => {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT p.*,
+      (SELECT COUNT(*) FROM leads l WHERE l.promo_code = p.code) AS uses_count
+    FROM promo_codes p
+    ORDER BY p.created_at DESC
+  `).all();
+  res.json(rows);
+});
+
+router.post('/promocodes', (req, res) => {
+  const db = getDb();
+  let { code, partner_name, discount_percent } = req.body;
+  code = String(code || '').trim().toUpperCase().replace(/\s+/g, '');
+  const pct = parseInt(discount_percent);
+  if (!code) return res.status(400).json({ error: 'Введите код' });
+  if (!Number.isFinite(pct) || pct <= 0 || pct > 100) return res.status(400).json({ error: 'Скидка должна быть от 1 до 100%' });
+
+  const exists = db.prepare('SELECT id FROM promo_codes WHERE code=?').get(code);
+  if (exists) return res.status(400).json({ error: 'Такой промокод уже существует' });
+
+  try {
+    const result = db.prepare(
+      'INSERT INTO promo_codes (code, partner_name, discount_percent, active) VALUES (?, ?, ?, 1)'
+    ).run(code, (partner_name || '').trim(), pct);
+    logAction(db, 'promo_create', `Создан промокод ${code} (${pct}%) для ${partner_name || '—'}`, req);
+    res.json({ id: result.lastInsertRowid, code });
+  } catch (e) {
+    res.status(500).json({ error: 'Ошибка создания промокода' });
+  }
+});
+
+router.put('/promocodes/:id', (req, res) => {
+  const db = getDb();
+  const promo = db.prepare('SELECT * FROM promo_codes WHERE id=?').get(req.params.id);
+  if (!promo) return res.status(404).json({ error: 'Промокод не найден' });
+
+  let { partner_name, discount_percent, active } = req.body;
+  const pct = discount_percent != null ? parseInt(discount_percent) : promo.discount_percent;
+  if (!Number.isFinite(pct) || pct <= 0 || pct > 100) return res.status(400).json({ error: 'Скидка должна быть от 1 до 100%' });
+
+  db.prepare('UPDATE promo_codes SET partner_name=?, discount_percent=?, active=? WHERE id=?')
+    .run((partner_name != null ? partner_name : promo.partner_name || '').trim(), pct, active ? 1 : 0, req.params.id);
+  logAction(db, 'promo_update', `Обновлён промокод ${promo.code}`, req);
+  res.json({ ok: true });
+});
+
+router.delete('/promocodes/:id', (req, res) => {
+  const db = getDb();
+  const promo = db.prepare('SELECT * FROM promo_codes WHERE id=?').get(req.params.id);
+  if (!promo) return res.status(404).json({ error: 'Промокод не найден' });
+  db.prepare('DELETE FROM promo_codes WHERE id=?').run(req.params.id);
+  logAction(db, 'promo_delete', `Удалён промокод ${promo.code}`, req);
+  res.json({ ok: true });
+});
+
 // ─── ЗАЯВКИ ──────────────────────────────────────────────────────────────────
 router.get('/leads', (req, res) => {
   const db = getDb();
