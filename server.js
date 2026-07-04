@@ -99,6 +99,10 @@ app.get('/admin/categories', requireAuth, (req, res) => {
   res.send(adminLayout('categories'));
 });
 
+app.get('/admin/promocodes', requireAuth, (req, res) => {
+  res.send(adminLayout('promocodes'));
+});
+
 app.get('/admin/leads', requireAuth, (req, res) => {
   res.send(adminLayout('leads'));
 });
@@ -163,6 +167,7 @@ function adminLayout(page) {
     leads: { title: 'Заявки', icon: '📋' },
     products: { title: 'Каталог товаров', icon: '🛋️' },
     categories: { title: 'Категории', icon: '🗂️' },
+    promocodes: { title: 'Промокоды', icon: '🏷️' },
     portfolio: { title: 'Наши работы', icon: '🖼️' },
     reviews: { title: 'Отзывы', icon: '⭐' },
     faq: { title: 'Частые вопросы', icon: '❓' },
