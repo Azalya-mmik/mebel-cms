@@ -71,18 +71,49 @@ router.get('/public/products', (req, res) => {
   }
 });
 
+// ─── ПРОМОКОД: проверка кода с сайта (без авторизации) ────────────────────────
+router.post('/public/promo/check', (req, res) => {
+  try {
+    const db = getDb();
+    const code = String((req.body || {}).code || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!code) return res.json({ valid: false });
+    const promo = db.prepare('SELECT * FROM promo_codes WHERE code=? AND active=1').get(code);
+    if (!promo) return res.json({ valid: false });
+    res.json({ valid: true, discount_percent: promo.discount_percent });
+  } catch (e) {
+    res.json({ valid: false });
+  }
+});
+
 // ─── ПРИЁМ ЗАЯВКИ С САЙТА ─────────────────────────────────────────────────────
 router.post('/public/lead', (req, res) => {
   try {
     const db = getDb();
-    const { name, phone, message, source } = req.body || {};
+    const { name, phone, message, source, promo_code } = req.body || {};
     // Достаточно телефона ИЛИ имени — не теряем контакт
     if (!phone && !name) {
       return res.status(400).json({ error: 'Укажите телефон или имя' });
     }
+
+    // Если пришёл промокод — проверяем его ещё раз на сервере (не доверяем фронту)
+    // и сохраняем снимок (код/партнёр/скидка), чтобы статистика не менялась,
+    // если промокод потом отредактируют или удалят.
+    let promoRow = null;
+    if (promo_code) {
+      const code = String(promo_code).trim().toUpperCase().replace(/\s+/g, '');
+      promoRow = db.prepare('SELECT * FROM promo_codes WHERE code=? AND active=1').get(code);
+    }
+
     const result = db
-      .prepare('INSERT INTO leads (name, phone, message, source) VALUES (?, ?, ?, ?)')
-      .run(name || '', phone || '', message || '', source || 'Сайт R&T');
+      .prepare(`INSERT INTO leads
+        (name, phone, message, source, promo_code, promo_partner, promo_discount_percent)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(
+        name || '', phone || '', message || '', source || 'Сайт R&T',
+        promoRow ? promoRow.code : null,
+        promoRow ? promoRow.partner_name : null,
+        promoRow ? promoRow.discount_percent : null,
+      );
 
     sendLeadEmail({ name, phone, message }).catch(() => {});
     res.json({ ok: true, id: result.lastInsertRowid });
