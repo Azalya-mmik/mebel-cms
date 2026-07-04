@@ -98,7 +98,7 @@ function renderLeads(leads) {
   $('leadsBody').innerHTML = leads.map(l => `
     <tr style="cursor:pointer" onclick="openLead(${l.id})">
       <td style="color:var(--text-muted);font-size:12px">#${l.id}</td>
-      <td><strong>${l.name || '—'}</strong></td>
+      <td><strong>${l.name || '—'}</strong>${l.promo_code ? `<br><span style="background:#f0e6d2;color:#8a5a1e;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;display:inline-block;margin-top:3px">🏷️ ${l.promo_code}</span>` : ''}</td>
       <td><a href="tel:${l.phone}" onclick="event.stopPropagation()">${l.phone}</a></td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:13px">
         ${l.message || '—'}
@@ -130,6 +130,7 @@ function openLead(id) {
         <div><label>Телефон</label><p><a href="tel:${l.phone}" style="font-weight:700;color:var(--accent)">${l.phone}</a></p></div>
       </div>
       <div><label>Сообщение</label><p style="background:var(--bg);padding:10px;border-radius:8px">${l.message || '—'}</p></div>
+      ${l.promo_code ? `<div><label>Промокод</label><p>🏷️ <b>${l.promo_code}</b>${l.promo_partner ? ` — партнёр: ${l.promo_partner}` : ''} (скидка ${l.promo_discount_percent}%)</p></div>` : ''}
       <div class="form-row">
         <div><label>Источник</label><p>${l.source || 'site'}</p></div>
         <div><label>Дата</label><p>${fmtDate(l.created_at)}</p></div>
