@@ -168,4 +168,78 @@ async function restoreSnapshot(key) {
   return { restored: bytes.length };
 }
 
-module.exports = { restoreOnBoot, start, markDirty, upload, isEnabled, createSnapshot, listSnapshots, restoreSnapshot };
+// ─── ФОТО (товары, категории, портфолио) ──────────────────────────────────
+// Та же логика, что и для базы: фото храним и на диске (для мгновенной раздачи),
+// и в S3 (чтобы не терялись при редеплое — диск контейнера каждый раз новый).
+const IMG_PREFIX = 'uploads/';
+
+// Загрузить одно фото в S3 сразу после того, как оно сохранено на диск
+async function uploadImage(localPath, filename) {
+  if (!enabled) return;
+  try {
+    const { PutObjectCommand } = require('@aws-sdk/client-s3');
+    const body = fs.readFileSync(localPath);
+    await client.send(new PutObjectCommand({
+      Bucket: bucket, Key: IMG_PREFIX + filename, Body: body,
+      ContentType: guessContentType(filename),
+    }));
+  } catch (e) {
+    console.warn('⚠️  Не удалось выгрузить фото в S3:', filename, e && (e.name || e.message));
+  }
+}
+
+// Удалить фото из S3 (когда удаляют товар/категорию/работу на сайте)
+async function deleteImage(filename) {
+  if (!enabled) return;
+  try {
+    const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: IMG_PREFIX + filename }));
+  } catch (e) {}
+}
+
+// При старте сервера — скачать из S3 все фото, которых ещё нет на локальном диске
+async function restoreImagesOnBoot() {
+  if (!enabled) return;
+  try {
+    const { ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+    const DATA_DIR2 = process.env.DATA_DIR || path.join(__dirname, '..');
+    const uploadsDir = path.join(DATA_DIR2, 'public', 'uploads');
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    let token;
+    let count = 0;
+    do {
+      const out = await client.send(new ListObjectsV2Command({
+        Bucket: bucket, Prefix: IMG_PREFIX, ContinuationToken: token,
+      }));
+      for (const obj of out.Contents || []) {
+        const filename = obj.Key.slice(IMG_PREFIX.length);
+        if (!filename) continue;
+        const localPath = path.join(uploadsDir, filename);
+        if (fs.existsSync(localPath)) continue;
+        try {
+          const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: obj.Key }));
+          const bytes = await streamToBuffer(res.Body);
+          fs.writeFileSync(localPath, bytes);
+          count++;
+        } catch (e) {}
+      }
+      token = out.NextContinuationToken;
+    } while (token);
+    if (count) console.log(`✅ Восстановлено ${count} фото из S3`);
+  } catch (e) {
+    console.warn('⚠️  Не удалось восстановить фото из S3:', e && (e.name || e.message));
+  }
+}
+
+function guessContentType(filename) {
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === '.png') return 'image/png';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.gif') return 'image/gif';
+  return 'image/jpeg';
+}
+
+module.exports = {
+  restoreOnBoot, start, markDirty, upload, isEnabled, createSnapshot, listSnapshots, restoreSnapshot,
+  uploadImage, deleteImage, restoreImagesOnBoot,
+};
