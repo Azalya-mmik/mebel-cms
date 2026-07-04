@@ -34,6 +34,24 @@ $('content').innerHTML = `
       </div>
     </div>
 
+    <!-- SEO & Analytics -->
+    <div class="card">
+      <div class="card-header">🔍 Индексация в Яндексе и аналитика</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label>Код подтверждения Яндекс.Вебмастер (meta-тег)</label>
+          <input type="text" id="s-yandex_verification" placeholder="напр. a1b2c3d4e5f6g7h8">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Получить: yandex.ru/webmaster → добавить сайт → способ подтверждения «Мета-тег» → скопировать значение content</div>
+        </div>
+        <div class="form-group">
+          <label>Номер счётчика Яндекс.Метрики</label>
+          <input type="text" id="s-yandex_metrika_id" placeholder="напр. 12345678">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Получить: metrika.yandex.ru → создать счётчик → скопировать номер</div>
+        </div>
+        <button class="btn btn-primary" onclick="saveSection('seo_analytics')">💾 Сохранить</button>
+      </div>
+    </div>
+
     <!-- Banner -->
     <div class="card">
       <div class="card-header">🎉 Баннер акции</div>
@@ -60,7 +78,7 @@ $('content').innerHTML = `
 async function loadSettings() {
   try {
     const s = await api('GET', '/api/settings');
-    const fields = ['phone', 'email', 'address', 'vk', 'telegram', 'whatsapp', 'avito', 'site_name', 'site_tagline', 'banner_title', 'banner_text'];
+    const fields = ['phone', 'email', 'address', 'vk', 'telegram', 'whatsapp', 'avito', 'site_name', 'site_tagline', 'banner_title', 'banner_text', 'yandex_verification', 'yandex_metrika_id'];
     fields.forEach(key => {
       const el = $(`s-${key}`);
       if (el) el.value = s[key] || '';
@@ -84,7 +102,8 @@ async function saveSection(section) {
     contact: ['phone', 'email', 'address'],
     social: ['vk', 'telegram', 'whatsapp', 'avito'],
     site: ['site_name', 'site_tagline'],
-    banner: ['banner_title', 'banner_text', 'banner_active']
+    banner: ['banner_title', 'banner_text', 'banner_active'],
+    seo_analytics: ['yandex_verification', 'yandex_metrika_id']
   };
 
   for (const key of sectionFields[section] || []) {
