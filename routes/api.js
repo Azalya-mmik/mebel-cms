@@ -194,7 +194,7 @@ router.get('/categories', (req, res) => {
 
 router.post('/categories', (req, res) => {
   const db = getDb();
-  const { name, sort_order } = req.body;
+  const { name, sort_order, delivery_price, delivery_free_from } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Название обязательно' });
 
   let slug = slugify(name);
@@ -202,10 +202,14 @@ router.post('/categories', (req, res) => {
   const exists = db.prepare('SELECT id FROM categories WHERE slug=?').get(slug);
   if (exists) slug = `${slug}-${Date.now().toString().slice(-5)}`;
 
+  const freeFrom = (delivery_free_from === '' || delivery_free_from === null || delivery_free_from === undefined)
+    ? null
+    : parseInt(delivery_free_from) || null;
+
   try {
     const result = db.prepare(
-      'INSERT INTO categories (name, slug, sort_order, active) VALUES (?, ?, ?, 1)'
-    ).run(name.trim(), slug, parseInt(sort_order) || 0);
+      'INSERT INTO categories (name, slug, sort_order, active, delivery_price, delivery_free_from) VALUES (?, ?, ?, 1, ?, ?)'
+    ).run(name.trim(), slug, parseInt(sort_order) || 0, parseInt(delivery_price) || 0, freeFrom);
     logAction(db, 'category_create', `Создана категория: ${name}`, req);
     res.json({ id: result.lastInsertRowid, slug });
   } catch (e) {
@@ -216,12 +220,16 @@ router.post('/categories', (req, res) => {
 
 router.put('/categories/:id', (req, res) => {
   const db = getDb();
-  const { name, sort_order, active } = req.body;
+  const { name, sort_order, active, delivery_price, delivery_free_from } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Название обязательно' });
 
+  const freeFrom = (delivery_free_from === '' || delivery_free_from === null || delivery_free_from === undefined)
+    ? null
+    : parseInt(delivery_free_from) || null;
+
   db.prepare(
-    'UPDATE categories SET name=?, sort_order=?, active=? WHERE id=?'
-  ).run(name.trim(), parseInt(sort_order) || 0, active ? 1 : 0, req.params.id);
+    'UPDATE categories SET name=?, sort_order=?, active=?, delivery_price=?, delivery_free_from=? WHERE id=?'
+  ).run(name.trim(), parseInt(sort_order) || 0, active ? 1 : 0, parseInt(delivery_price) || 0, freeFrom, req.params.id);
   logAction(db, 'category_update', `Обновлена категория ID ${req.params.id}: ${name}`, req);
   res.json({ ok: true });
 });
