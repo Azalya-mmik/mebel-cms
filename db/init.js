@@ -191,6 +191,8 @@ function initDb() {
     ['banner_active', '0'],
     ['banner_title', 'Акция!'],
     ['banner_text', ''],
+    ['yandex_verification', ''],
+    ['yandex_metrika_id', ''],
   ];
 
   const insertSetting = db.prepare(
