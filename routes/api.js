@@ -5,6 +5,7 @@ const fs = require('fs');
 const { getDb } = require('../db/init');
 const { requireAuth, logAction } = require('../middleware/auth');
 const nodemailer = require('nodemailer');
+const s3sync = require('../db/s3sync');
 
 // Middleware: все API роуты требуют авторизации
 router.use(requireAuth);
@@ -108,6 +109,7 @@ router.delete('/products/:id', (req, res) => {
   if (product && product.image) {
     const imgPath = path.join(__dirname, '..', 'public', product.image);
     try { fs.unlinkSync(imgPath); } catch (e) {}
+    s3sync.deleteImage(path.basename(product.image)).catch(() => {});
   }
   db.prepare('DELETE FROM products WHERE id=?').run(req.params.id);
   logAction(db, 'product_delete', `Удалён товар ID ${req.params.id}`, req);
@@ -136,7 +138,7 @@ router.post('/products/:id/image', (req, res) => {
     file.mv(uploadPath, (err) => {
       done++;
       if (err) { failed = true; }
-      else newUrls.push(`/uploads/${filename}`);
+      else { newUrls.push(`/uploads/${filename}`); s3sync.uploadImage(uploadPath, filename).catch(() => {}); }
       if (done === files.length) {
         if (failed && !newUrls.length) return res.status(500).json({ error: 'Ошибка загрузки' });
         const product = db.prepare('SELECT images, image FROM products WHERE id=?').get(req.params.id);
@@ -169,6 +171,7 @@ router.put('/products/:id/images', (req, res) => {
   oldImages.filter(u => !images.includes(u)).forEach(u => {
     const filePath = path.join(DATA_DIR, 'public', u.replace(/^\//, ''));
     try { fs.unlinkSync(filePath); } catch (e) {}
+    s3sync.deleteImage(path.basename(u)).catch(() => {});
   });
 
   db.prepare('UPDATE products SET image=?, images=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
@@ -245,6 +248,7 @@ router.delete('/categories/:id', (req, res) => {
   if (cat.cover_image) {
     const imgPath = path.join(__dirname, '..', 'public', cat.cover_image);
     try { fs.unlinkSync(imgPath); } catch (e) {}
+    s3sync.deleteImage(path.basename(cat.cover_image)).catch(() => {});
   }
   db.prepare('DELETE FROM categories WHERE id=?').run(req.params.id);
   logAction(db, 'category_delete', `Удалена категория: ${cat.name}`, req);
@@ -266,6 +270,7 @@ router.post('/categories/:id/image', (req, res) => {
 
   file.mv(uploadPath, (err) => {
     if (err) return res.status(500).json({ error: 'Ошибка загрузки' });
+    s3sync.uploadImage(uploadPath, filename).catch(() => {});
     const imgUrl = `/uploads/${filename}`;
     db.prepare('UPDATE categories SET cover_image=? WHERE id=?').run(imgUrl, req.params.id);
     logAction(db, 'category_image', `Загружена обложка категории ID ${req.params.id}`, req);
@@ -403,10 +408,12 @@ router.post('/portfolio', (req, res) => {
   const file = req.files.image;
   const ext = path.extname(file.name).toLowerCase();
   const filename = `portfolio_${Date.now()}${ext}`;
-  const uploadPath = path.join(__dirname, '..', 'public', 'uploads', filename);
+  const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
+  const uploadPath = path.join(DATA_DIR, 'public', 'uploads', filename);
 
   file.mv(uploadPath, (err) => {
     if (err) return res.status(500).json({ error: 'Ошибка загрузки' });
+    s3sync.uploadImage(uploadPath, filename).catch(() => {});
     const result = db.prepare('INSERT INTO portfolio (title, description, image) VALUES (?, ?, ?)').run(
       req.body.title || 'Работа', req.body.description || '', `/uploads/${filename}`
     );
@@ -421,6 +428,7 @@ router.delete('/portfolio/:id', (req, res) => {
   if (item && item.image) {
     const imgPath = path.join(__dirname, '..', 'public', item.image);
     try { fs.unlinkSync(imgPath); } catch (e) {}
+    s3sync.deleteImage(path.basename(item.image)).catch(() => {});
   }
   db.prepare('DELETE FROM portfolio WHERE id=?').run(req.params.id);
   res.json({ ok: true });
