@@ -153,6 +153,30 @@ function initDb() {
     );
   `);
 
+  // ── Промокоды: если в базе осталась СТАРАЯ таблица от прежней (удалённой) реализации
+  // с другими столбцами — она мешает новым записям. Пересоздаём её с нуля (данных там нет,
+  // т.к. функция была нерабочей).
+  try {
+    const promoInfo = db.prepare("PRAGMA table_info(promo_codes)").all();
+    const promoCols = promoInfo.map(c => c.name);
+    const needed = ['code', 'partner_name', 'discount_percent', 'active'];
+    const hasAll = needed.every(c => promoCols.includes(c));
+    if (promoInfo.length && !hasAll) {
+      db.exec('DROP TABLE promo_codes');
+      db.exec(`CREATE TABLE promo_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        partner_name TEXT DEFAULT '',
+        discount_percent INTEGER NOT NULL DEFAULT 0,
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      console.log('♻️  Таблица promo_codes была в старом формате — пересоздана.');
+    }
+  } catch (e) {
+    console.warn('⚠️  Не удалось проверить/пересобрать promo_codes:', e.message);
+  }
+
   // Начальные настройки
   const defaults = [
     ['phone', '+79274085023'],
