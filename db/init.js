@@ -141,6 +141,16 @@ function initDb() {
       value REAL DEFAULT 1.0,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Промокоды партнёров
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      partner_name TEXT DEFAULT '',
+      discount_percent INTEGER NOT NULL DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Начальные настройки
@@ -232,6 +242,13 @@ function initDb() {
   addCatCol('delivery_free_from', 'INTEGER');         // от скольких штук доставка бесплатна (NULL — никогда сама по себе)
   // Для уже существующей категории «Банкетки» переносим прежнее зашитое значение (300 ₽/шт), если ещё не задано
   db.prepare("UPDATE categories SET delivery_price=300 WHERE name='Банкетки' AND delivery_price=0").run();
+
+  // ── Заявки: снимок промокода на момент заявки (миграция) ──
+  const leadCols = db.prepare("PRAGMA table_info(leads)").all().map(c => c.name);
+  const addLeadCol = (name, def) => { if (!leadCols.includes(name)) db.exec(`ALTER TABLE leads ADD COLUMN ${name} ${def}`); };
+  addLeadCol('promo_code', 'TEXT');              // код, который ввёл клиент
+  addLeadCol('promo_partner', 'TEXT');           // имя партнёра на момент заявки
+  addLeadCol('promo_discount_percent', 'INTEGER'); // процент скидки на момент заявки
 
   // ── Стартовый каталог R&T (15 товаров) — заливаем один раз ──
   const catV = db.prepare("SELECT value FROM settings WHERE key='catalog_v'").get();
