@@ -87,4 +87,105 @@ router.get('/faq', (req, res) => {
   }
 });
 
+// ─── КАЛЬКУЛЯТОР ЦЕНЫ ─────────────────────────────────────────
+// Вычисляет стоимость товара с учётом материала, фурнитуры, доставки.
+// Params (query или body):
+//   productId (обяз.) - id товара
+//   quantity (опц., дефолт 1) - количество
+//   material (опц.) - oak/pine/mdf (применяет коэффициент)
+//   hardware (опц.) - premium/standard (применяет коэффициент)
+//   includeDelivery (опц., дефолт true) - считать ли доставку
+//   promoDiscountPercent (опц., дефолт 0) - процент скидки по промокоду
+//
+// Возвращает:
+//   {
+//     productId, name, basePrice, quantity,
+//     materialCoef, hardwareCoef, costRot,
+//     subtotal (с коэфф. и доп. опциями),
+//     deliveryPrice (стоимость доставки или 0),
+//     promoDiscount (сумма скидки),
+//     total (финальная сумма)
+//   }
+router.get('/calculate-price', (req, res) => {
+  try {
+    const db = getDb();
+    const productId = parseInt(req.query.productId || req.body?.productId);
+    const quantity = Math.max(1, parseInt(req.query.quantity || req.body?.quantity || 1));
+    const material = (req.query.material || req.body?.material || '').toLowerCase();
+    const hardware = (req.query.hardware || req.body?.hardware || '').toLowerCase();
+    const includeDelivery = req.query.includeDelivery !== 'false' && req.body?.includeDelivery !== false;
+    const promoDiscountPercent = Math.max(0, Math.min(100, parseInt(req.query.promoDiscountPercent || req.body?.promoDiscountPercent || 0)));
+
+    if (!productId || isNaN(productId)) {
+      return res.status(400).json({ error: 'missing_product_id' });
+    }
+
+    // Берём товар и категорию
+    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+    if (!product) {
+      return res.status(404).json({ error: 'product_not_found' });
+    }
+
+    const category = db.prepare('SELECT delivery_price, delivery_free_from FROM categories WHERE name = ?').get(product.category);
+
+    // Загружаем коэффициенты
+    const getCoef = (id) => {
+      const row = db.prepare('SELECT value FROM calculator WHERE id = ?').get(id);
+      return row ? parseFloat(row.value) : 1.0;
+    };
+
+    let basePrice = product.price || 0;
+    let materialCoef = 1.0;
+    let hardwareCoef = 1.0;
+    let costRot = product.cost_rot || 0;
+
+    // Материал
+    if (material === 'oak') materialCoef = getCoef('coef_oak');
+    else if (material === 'pine') materialCoef = getCoef('coef_pine');
+    else if (material === 'mdf') materialCoef = getCoef('coef_mdf');
+
+    // Фурнитура
+    if (hardware === 'premium') hardwareCoef = getCoef('coef_premium');
+    else if (hardware === 'standard') hardwareCoef = getCoef('coef_standard');
+
+    // Цена за одну единицу (с коэффициентами)
+    const pricePerUnit = basePrice * materialCoef * hardwareCoef + costRot;
+    const subtotal = pricePerUnit * quantity;
+
+    // Доставка
+    let deliveryPrice = 0;
+    if (includeDelivery && category) {
+      const catDeliveryPrice = category.delivery_price || 0;
+      const freeFrom = category.delivery_free_from || null;
+      // Доставка бесплатна, если кол-во >= freeFrom
+      if (freeFrom === null || quantity < freeFrom) {
+        deliveryPrice = catDeliveryPrice * quantity;
+      }
+    }
+
+    // Скидка по промокоду
+    const promoDiscount = Math.floor(subtotal * promoDiscountPercent / 100);
+
+    // Итого
+    const total = subtotal + deliveryPrice - promoDiscount;
+
+    res.json({
+      productId,
+      name: product.name,
+      basePrice,
+      quantity,
+      materialCoef,
+      hardwareCoef,
+      costRot,
+      subtotal: Math.round(subtotal),
+      deliveryPrice: Math.round(deliveryPrice),
+      promoDiscount,
+      total: Math.round(total),
+    });
+  } catch (e) {
+    console.error('calculate-price error:', e);
+    res.status(500).json({ error: 'calculate_price_error' });
+  }
+});
+
 module.exports = router;
