@@ -253,6 +253,7 @@ window.addEventListener("pagehide",saveAppState);
 function restoreAppState(){try{var raw=sessionStorage.getItem("rt_state");if(!raw)return false;var st=JSON.parse(raw);
  if(st.cart)Object.keys(st.cart).forEach(function(k){cart[k]=st.cart[k];});
  if(st.appliedPromo)appliedPromo=st.appliedPromo;
+ _prevCartCount=totals().c;
  updateBar();
  if(st.view==="cart")showCart(true);
  else if(st.view==="chairs")showChairs(true);
@@ -460,17 +461,27 @@ function delivery(){
   return applyOrderFree({fee:fee,label:"Доставка по РТ, до подъезда/дома"});
 }
 function plural(n){const a=n%10,b=n%100;let w="позиций";if(a===1&&b!==11)w="позиция";else if(a>=2&&a<=4&&(b<10||b>=20))w="позиции";return n+" "+w;}
-var miniCartOpen=false;
+var miniCartOpen=false;var _prevCartCount=0;
 function toggleMiniCart(){miniCartOpen=!miniCartOpen;renderMiniCart();}
+function closeMiniCart(){miniCartOpen=false;renderMiniCart();}
 function renderMiniCart(){var p=document.getElementById("miniCartPanel");if(!p)return;
  if(!miniCartOpen||!entries().length){p.style.display="none";return;}
  p.style.display="";
  var rows=entries().map(function(e){return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+e.name+(e.qty>1?' × '+e.qty:'')+'</div></div><b style="white-space:nowrap;font-size:13.5px">'+(e.price>0?fmt(e.price*e.qty):"по запросу")+'</b><button onclick="miniCartRemove(\''+e.k+'\')" style="border:none;background:#f3efe7;color:#b03434;font-weight:800;width:26px;height:26px;border-radius:50%;cursor:pointer;flex:0 0 auto">×</button></div>';}).join("");
  var t=totals(),_d=delivery();
- p.innerHTML=rows+'<div style="display:flex;justify-content:space-between;padding:10px 0 2px;font-weight:800">Итого<span>'+fmt(t.s-promoDiscount(t.s)+(_d?_d.fee:0))+'</span></div>';
+ var chairQty=entries().filter(function(e){return e.k.indexOf("chair-")===0;}).reduce(function(a,e){return a+e.qty;},0);
+ var bnkQty=entries().filter(function(e){return e.k.indexOf("bnk-")===0;}).reduce(function(a,e){return a+e.qty;},0);
+ var hint="";
+ if(chairQty>0&&chairQty<DELIVERY_CFG.chairFreeFrom){hint="До бесплатной доставки: ещё "+(DELIVERY_CFG.chairFreeFrom-chairQty)+" "+(function(n){var a=n%10,b=n%100;if(a===1&&b!==11)return"стул";if(a>=2&&a<=4&&(b<10||b>=20))return"стула";return"стульев";})(DELIVERY_CFG.chairFreeFrom-chairQty);}
+ else if(bnkQty>0&&CATEGORY_DELIVERY["Банкетки"]&&CATEGORY_DELIVERY["Банкетки"].freeFrom&&bnkQty<CATEGORY_DELIVERY["Банкетки"].freeFrom){var need=CATEGORY_DELIVERY["Банкетки"].freeFrom-bnkQty;hint="До бесплатной доставки: ещё "+need+" банкетк"+(need===1?"а":"и");}
+ var delivLine=_d?('<div style="display:flex;justify-content:space-between;font-size:12.5px;color:#6a645a;padding:4px 0"><span>'+_d.label+'</span><b'+(_d.fee>0?'':' style="color:#1f9d57"')+'>'+(_d.fee>0?fmt(_d.fee):"бесплатно")+'</b></div>'):'';
+ var hintLine=hint?'<div style="font-size:11.5px;color:#b07a2e;font-weight:700;padding:2px 0 4px">'+hint+'</div>':'';
+ p.innerHTML='<div style="display:flex;justify-content:flex-end"><button onclick="closeMiniCart()" style="border:none;background:none;color:#8a8378;font-size:18px;cursor:pointer;padding:0 4px">×</button></div>'+rows+delivLine+hintLine+'<div style="display:flex;justify-content:space-between;padding:10px 0 2px;font-weight:800">Итого<span>'+fmt(t.s-promoDiscount(t.s)+(_d?_d.fee:0))+'</span></div>';
 }
 function miniCartRemove(k){delete cart[k];updateBar();refreshGrids();if(document.getElementById("vCart").style.display!=="none")renderCart();}
 function updateBar(){const{c,s}=totals(),bar=document.getElementById("cartbar"),badge=document.getElementById("cartBadge");
+ if(c>_prevCartCount)miniCartOpen=true;
+ _prevCartCount=c;
  renderMiniCart();
  if(c>0){bar.classList.add("show");document.getElementById("cbCount").textContent=plural(c);var _d=delivery();document.getElementById("cbSum").textContent=fmt(s-promoDiscount(s)+(_d?_d.fee:0));badge.textContent=c;badge.classList.add("show");}
  else{bar.classList.remove("show");badge.classList.remove("show");}
