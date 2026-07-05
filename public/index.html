@@ -362,7 +362,7 @@ el.querySelector(".more").onclick=e=>{const d=el.querySelector(".det");d.classLi
 const ctrl=el.querySelector(".ctrl");
 function keyOf(){return (p.type==="Банкетки"?"bnk-":"chair-")+p.id+(rotChk&&rotChk.checked?"-rot":"")+"-c"+selN+"-l"+selLeg;}
 function syncCtrl(){const k=keyOf(),q=cart[k]?cart[k].qty:0;
-if(q===0){ctrl.innerHTML='<button class="add">В заявку</button>';ctrl.querySelector(".add").onclick=()=>{const rot=rotChk&&rotChk.checked;cart[k]={name:p.name,sub:["ткань № "+selN,"ножки: "+selLeg,rot?"поворотный механизм":""].filter(Boolean).join(", "),price:rot?p.costRot:p.cost,qty:1};syncCtrl();updateBar();};}
+if(q===0){ctrl.innerHTML='<button class="add">В заявку</button>';ctrl.querySelector(".add").onclick=()=>{const rot=rotChk&&rotChk.checked;var item={name:p.name,fabric:"ткань № "+selN,legs:"ножки: "+selLeg,rot:!!rot,baseCost:p.cost,rotCost:(p.costRot!=null?p.costRot:null),qty:1};item.price=computeItemPrice(item);item.sub=buildItemSub(item);cart[k]=item;syncCtrl();updateBar();};}
 else{ctrl.innerHTML='<div class="stepper"><button>−</button><div class="q">'+q+'</div><button>+</button></div>';const b=ctrl.querySelectorAll("button");b[0].onclick=()=>{cart[k].qty--;if(cart[k].qty<=0)delete cart[k];syncCtrl();updateBar();};b[1].onclick=()=>{cart[k].qty++;syncCtrl();updateBar();};}}
 syncCtrl();return el;}
 
@@ -408,6 +408,9 @@ document.getElementById("mFeatBtn").onclick=function(){var d=document.getElement
 buildBeds();
 
 /* ----- CART ----- */
+function buildItemSub(item){return [item.fabric,item.legs,(item.rot&&item.rotCost!=null)?"поворотный механизм":""].filter(Boolean).join(", ");}
+function computeItemPrice(item){return (item.rot&&item.rotCost!=null)?item.rotCost:(item.baseCost!=null?item.baseCost:item.price);}
+function setItemRot(key,rotOn){var item=cart[key];if(!item||item.rotCost==null)return;item.rot=!!rotOn;item.price=computeItemPrice(item);item.sub=buildItemSub(item);updateBar();refreshGrids();if(document.getElementById("vCart").style.display!=="none")renderCart();}
 function entries(){return Object.keys(cart).map(k=>({k,...cart[k]}));}
 function totals(){let c=0,s=0;entries().forEach(e=>{c+=e.qty;s+=e.qty*e.price;});return{c,s};}var DELIVERY_CFG={bed:1500,chair:200,chairFreeFrom:4,freeFromOrderTotal:0};
 var appliedPromo=null; // {code, discount_percent} — устанавливается функцией applyPromo()
@@ -467,7 +470,7 @@ function closeMiniCart(){miniCartOpen=false;renderMiniCart();}
 function renderMiniCart(){var p=document.getElementById("miniCartPanel");if(!p)return;
  if(!miniCartOpen||!entries().length){p.style.display="none";return;}
  p.style.display="";
- var rows=entries().map(function(e){return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+e.name+(e.qty>1?' × '+e.qty:'')+'</div>'+(e.sub?'<div style="font-size:11.5px;color:#8a8378">'+e.sub+'</div>':'')+'</div><b style="white-space:nowrap;font-size:13.5px">'+(e.price>0?fmt(e.price*e.qty):"по запросу")+'</b><button onclick="miniCartRemove(\''+e.k+'\')" style="border:none;background:#f3efe7;color:#b03434;font-weight:800;width:26px;height:26px;border-radius:50%;cursor:pointer;flex:0 0 auto">×</button></div>';}).join("");
+ var rows=entries().map(function(e){return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+e.name+(e.qty>1?' × '+e.qty:'')+'</div>'+(e.sub?'<div style="font-size:11.5px;color:#8a8378">'+e.sub+'</div>':'')+(e.rotCost!=null?'<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#3a352e;margin-top:4px;cursor:pointer"><input type="checkbox" '+(e.rot?'checked':'')+' onchange="setItemRot(\''+e.k+'\',this.checked)" style="width:15px;height:15px;margin:0"> Поворотный механизм</label>':'')+'</div><b style="white-space:nowrap;font-size:13.5px">'+(e.price>0?fmt(e.price*e.qty):"по запросу")+'</b><button onclick="miniCartRemove(\''+e.k+'\')" style="border:none;background:#f3efe7;color:#b03434;font-weight:800;width:26px;height:26px;border-radius:50%;cursor:pointer;flex:0 0 auto">×</button></div>';}).join("");
  var t=totals(),_d=delivery();
  var chairQty=entries().filter(function(e){return e.k.indexOf("chair-")===0;}).reduce(function(a,e){return a+e.qty;},0);
  var bnkQty=entries().filter(function(e){return e.k.indexOf("bnk-")===0;}).reduce(function(a,e){return a+e.qty;},0);
