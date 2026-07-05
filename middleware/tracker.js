@@ -26,6 +26,15 @@ function isLikelyBot(req, ua) {
   return false;
 }
 
+const crypto = require('crypto');
+
+function getCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  const part = header.split(';').map((s) => s.trim()).find((s) => s.startsWith(name + '='));
+  return part ? decodeURIComponent(part.slice(name.length + 1)) : null;
+}
+
 function trackVisit(req, res, next) {
   // Пропускать статику и API
   if (
@@ -54,11 +63,36 @@ function trackVisit(req, res, next) {
     const device = /mobile|android|iphone|ipad/i.test(ua) ? 'mobile' : 'desktop';
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
     const referer = req.headers['referer'] || '';
-    const sessionId = req.session ? req.session.id : '';
+
+    // ВАЖНО: express-session у нас настроен с saveUninitialized:false — для обычных
+    // посетителей (не логинящихся в админку) cookie сессии никогда не выставляется,
+    // и req.session.id на каждый запрос генерируется новый. Из-за этого 1 клиент,
+    // зашедший 10 раз за день, считался как 10 разных "уникальных" визитов.
+    // Поэтому используем отдельную долгоживущую cookie-метку посетителя.
+    let vid = getCookie(req, 'rt_vid');
+    if (!vid) {
+      vid = crypto.randomBytes(16).toString('hex');
+      try {
+        res.cookie('rt_vid', vid, {
+          maxAge: 180 * 24 * 60 * 60 * 1000,
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        });
+      } catch (e) {}
+    }
+
+    // Один и тот же посетитель (по vid, а если cookie не дошла — по IP) считается
+    // как 1 визит за календарные сутки, сколько бы страниц он ни открыл.
+    const dedupeKey = vid || ip;
+    const already = dedupeKey && db.prepare(
+      "SELECT 1 FROM visits WHERE date(created_at)=date('now') AND session_id=? LIMIT 1"
+    ).get(dedupeKey);
+    if (already) return next();
 
     db.prepare(
       'INSERT INTO visits (page, ip, user_agent, device, referer, session_id) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(req.path, ip, ua.substring(0, 200), device, referer.substring(0, 500), sessionId);
+    ).run(req.path, ip, ua.substring(0, 200), device, referer.substring(0, 500), dedupeKey);
   } catch (e) {}
 
   next();
