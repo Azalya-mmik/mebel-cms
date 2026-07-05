@@ -10,7 +10,7 @@ $('content').innerHTML = `
       <div class="modal-body">
         <div class="form-group"><label>Фото *</label>
           <div class="upload-area" onclick="$('portFile').click()">
-            <input type="file" id="portFile" accept="image/*" onchange="previewPort(this)">
+            <input type="file" id="portFile" accept="image/*" multiple onchange="previewPort(this)">
             <div id="portPreview"><div class="upload-icon">🖼️</div><p>Нажмите для выбора</p></div>
           </div>
         </div>
@@ -26,10 +26,14 @@ $('content').innerHTML = `
 `;
 
 function previewPort(input) {
-  if (!input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => { $('portPreview').innerHTML = `<img src="${e.target.result}" style="max-height:150px;border-radius:8px">`; };
-  reader.readAsDataURL(input.files[0]);
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  $('portPreview').innerHTML = files.length === 1 ? '' : `<p>${files.length} фото выбрано</p>`;
+  files.slice(0, 8).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => { $('portPreview').insertAdjacentHTML('beforeend', `<img src="${e.target.result}" style="max-height:100px;border-radius:8px;margin:2px">`); };
+    reader.readAsDataURL(f);
+  });
 }
 
 async function loadPortfolio() {
@@ -51,15 +55,19 @@ async function loadPortfolio() {
 }
 
 async function addPortItem() {
-  const file = $('portFile').files[0];
-  if (!file) { toast('Выберите фото', 'error'); return; }
-  const fd = new FormData();
-  fd.append('image', file);
-  fd.append('title', $('portTitle').value || 'Работа');
-  fd.append('description', $('portDesc').value || '');
+  const files = Array.from($('portFile').files || []);
+  if (!files.length) { toast('Выберите фото', 'error'); return; }
+  const title = $('portTitle').value || 'Работа';
+  const desc = $('portDesc').value || '';
   try {
-    await fetch('/api/portfolio', { method: 'POST', body: fd });
-    toast('Добавлено в портфолио', 'success');
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append('image', file);
+      fd.append('title', title);
+      fd.append('description', desc);
+      await fetch('/api/portfolio', { method: 'POST', body: fd });
+    }
+    toast(files.length > 1 ? `Добавлено ${files.length} фото` : 'Добавлено в портфолио', 'success');
     closeModal('addPortModal');
     loadPortfolio();
   } catch(e) { toast(e.message, 'error'); }
