@@ -113,9 +113,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
 
     <section class="lp-section" id="lpDelivery" style="margin-top:22px">
       <h2 class="lp-title">Рассчитать доставку</h2>
-      <p class="lp-subtitle">Укажите город и категорию товара — покажем ориентировочную стоимость доставки.</p>
+      <p class="lp-subtitle">Укажите город и категорию товара — покажем ориентировочную стоимость доставки. По Татарстану — доставка своим транспортом, по остальной России: стулья и банкетки — Почтой России, кровати и матрасы — транспортной компанией.</p>
       <div class="lp-form" style="max-width:480px;margin:0 auto">
-        <div class="field"><label>Ваш город</label><input id="dcCity" placeholder="Например: Казань или Москва"></div>
+        <div class="field"><label>Ваш город</label><input id="dcCity" list="ruCitiesList" placeholder="Например: Казань или Москва" autocomplete="off"></div>
+        <datalist id="ruCitiesList"></datalist>
         <div class="field"><label>Категория товара</label>
           <select id="dcCat" style="width:100%;border:1px solid var(--line);border-radius:13px;padding:13px 14px;font-size:16px;font-family:inherit;background:var(--surface)">
             <option value="chair">Стул / табурет</option>
@@ -665,7 +666,43 @@ function submitReview(){
 })();
 
 var TATARSTAN_CITIES=["казань","набережные челны","альметьевск","нижнекамск","бугульма","зеленодольск","елабуга","чистополь","азнакаево","лениногорск","менделеевск","мензелинск","заинск","буинск","татарстан","рт"];
-var RUSSIA_DELIVERY={chair:400,bnk:700,bed:2500};
+
+// Ориентировочное расстояние по дорогам от Набережных Челнов (км) до крупных городов РФ.
+// Используется для оценки стоимости доставки. Список можно расширять.
+var CITY_DISTANCES={
+  "набережные челны":0,"казань":230,"уфа":300,"ижевск":250,"пермь":480,"йошкар-ола":300,"чебоксары":350,
+  "саранск":500,"пенза":600,"ульяновск":350,"самара":450,"тольятти":400,"саратов":650,"волгоград":950,
+  "оренбург":550,"челябинск":700,"екатеринбург":600,"тюмень":850,"омск":1300,"новосибирск":1750,
+  "красноярск":2400,"иркутск":3300,"владивосток":6800,"хабаровск":6300,"москва":1000,"санкт-петербург":1550,
+  "нижний новгород":650,"киров":600,"воронеж":950,"ростов-на-дону":1350,"краснодар":1600,"сочи":1750,
+  "ставрополь":1500,"махачкала":1750,"астрахань":1100,"липецк":900,"тула":950,"рязань":800,"тверь":1150,
+  "ярославль":800,"кострома":750,"иваново":700,"владимир":800,"калуга":1050,"смоленск":1250,"брянск":1150,
+  "курск":1150,"белгород":1250,"тамбов":800,"архангельск":1450,"мурманск":2100,"петрозаводск":1750,
+  "вологда":950,"сургут":1400,"нижневартовск":1500,"магнитогорск":650,"курган":750,"барнаул":1900,
+  "кемерово":2000,"томск":2100,"волжский":950,"симферополь":2000,"севастополь":2050,"калининград":2200
+};
+var DEFAULT_RUSSIA_DISTANCE=1200; // если города нет в списке — грубая средняя оценка
+
+// Тарифы "от" (формула): база + расстояние × ставка за км. Подобрано по примеру
+// "Почта России, посылка стандартная, банкетка 7кг" ≈ 600–900₽ на расстояние ~1000км.
+var POST_TARIFF={base:250,perKm:0.35};   // Почта России — стулья, банкетки
+var PEK_TARIFF={base:1500,perKm:1.2};    // ПЭК — кровати, матрасы
+
+function cityDistance(cityLower){
+  if(CITY_DISTANCES[cityLower]!=null)return CITY_DISTANCES[cityLower];
+  for(var k in CITY_DISTANCES){if(cityLower.indexOf(k)>=0||k.indexOf(cityLower)>=0)return CITY_DISTANCES[k];}
+  return null;
+}
+(function fillCityDatalist(){
+  var dl=document.getElementById("ruCitiesList");if(!dl)return;
+  var names=TATARSTAN_CITIES.concat(Object.keys(CITY_DISTANCES)).filter(function(n){return n.length>2&&n!=="рт"&&n!=="татарстан";});
+  var seen={};
+  dl.innerHTML=names.filter(function(n){if(seen[n])return false;seen[n]=1;return true;}).map(function(n){
+    var cap=n.replace(/(^|-|\s)([а-яё])/g,function(_,p,c){return p+c.toUpperCase();});
+    return '<option value="'+cap+'">';
+  }).join("");
+})();
+
 function calcDelivery(){
   var cityRaw=(document.getElementById("dcCity").value||"").trim();
   var cat=document.getElementById("dcCat").value;
@@ -685,8 +722,14 @@ function calcDelivery(){
     var freeNote=cat==="chair"?(" От "+DELIVERY_CFG.chairFreeFrom+" шт — бесплатно."):(cat==="bed"?" Бесплатно вместе с матрасом.":"");
     res.innerHTML='<div class="delnote"><b>Доставка по Татарстану:</b> '+fmt(fee)+(cat==="chair"?" за штуку":"")+'.'+freeNote+' Пример: '+label+' ~'+fmt(avg)+' + доставка = <b>'+fmt(avg+fee)+'</b></div>';
   }else{
-    var rfee=RUSSIA_DELIVERY[cat];
-    res.innerHTML='<div class="delnote"><b>Доставка по России ('+cityRaw+'):</b> ориентировочно '+fmt(rfee)+'. Пример: '+label+' ~'+fmt(avg)+' + доставка '+fmt(rfee)+' = <b>'+fmt(avg+rfee)+'</b>. Точную стоимость уточним при оформлении заявки.</div>';
+    var dist=cityDistance(city);
+    var approx=dist==null;
+    if(dist==null)dist=DEFAULT_RUSSIA_DISTANCE;
+    var isPek=(cat==="bed");
+    var tariff=isPek?PEK_TARIFF:POST_TARIFF;
+    var rfee=Math.round(tariff.base+dist*tariff.perKm);
+    var methodName=isPek?"транспортная компания (ПЭК)":"Почта России";
+    res.innerHTML='<div class="delnote"><b>Доставка по России ('+cityRaw+'), способ: '+methodName+':</b> ориентировочно '+fmt(rfee)+(approx?' <span style="color:#8a8378">(город не найден в базе, расстояние оценено грубо)</span>':'')+'. Пример: '+label+' ~'+fmt(avg)+' + доставка '+fmt(rfee)+' = <b>'+fmt(avg+rfee)+'</b>. Точную стоимость и срок уточним при оформлении заявки.</div>';
   }
 }
 function leadScroll(){
