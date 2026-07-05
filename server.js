@@ -141,6 +141,7 @@ app.use('/api', (req, res, next) => {
   next();
 });
 app.use('/api', require('./routes/public')); // публичный API сайта (без авторизации)
+app.use('/api/ai', require('./routes/ai'));  // облегчённый API для AI-продавца (без base64, без авторизации)
 app.use('/api', apiRouter);                  // админ API (требует логина)
 app.use('/api/hockey', requireAuth, hockeyRouter); // личный дневник хоккеиста
 
