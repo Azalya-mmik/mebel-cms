@@ -71,6 +71,15 @@ $('content').innerHTML = `
         </div>
       </div>
     </div>
+    <!-- Fabric catalogs -->
+    <div class="card">
+      <div class="card-header">🧵 Каталоги тканей</div>
+      <div class="card-body">
+        <div class="form-group"><label>Ссылка на каталог для стульев/банкеток (Модера)</label><input type="text" id="s-fabric_url_chairs" placeholder="https://..."></div>
+        <div class="form-group"><label>Ссылка на каталог для кроватей (Velutto)</label><input type="text" id="s-fabric_url_beds" placeholder="https://..."></div>
+        <button class="btn btn-primary" onclick="saveSection('fabric')">💾 Сохранить</button>
+      </div>
+    </div>
   </div>
   <style>@media(max-width:768px){.settings-grid{grid-template-columns:1fr!important}}</style>
 `;
@@ -78,7 +87,7 @@ $('content').innerHTML = `
 async function loadSettings() {
   try {
     const s = await api('GET', '/api/settings');
-    const fields = ['phone', 'email', 'address', 'vk', 'telegram', 'whatsapp', 'avito', 'site_name', 'site_tagline', 'banner_title', 'banner_text', 'yandex_verification', 'yandex_metrika_id'];
+    const fields = ['phone', 'email', 'address', 'vk', 'telegram', 'whatsapp', 'avito', 'site_name', 'site_tagline', 'banner_title', 'banner_text', 'yandex_verification', 'yandex_metrika_id', 'fabric_url_chairs', 'fabric_url_beds'];
     fields.forEach(key => {
       const el = $(`s-${key}`);
       if (el) el.value = s[key] || '';
@@ -103,7 +112,8 @@ async function saveSection(section) {
     social: ['vk', 'telegram', 'whatsapp', 'avito'],
     site: ['site_name', 'site_tagline'],
     banner: ['banner_title', 'banner_text', 'banner_active'],
-    seo_analytics: ['yandex_verification', 'yandex_metrika_id']
+    seo_analytics: ['yandex_verification', 'yandex_metrika_id'],
+    fabric: ['fabric_url_chairs', 'fabric_url_beds']
   };
 
   for (const key of sectionFields[section] || []) {
