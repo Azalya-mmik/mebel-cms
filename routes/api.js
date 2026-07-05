@@ -411,7 +411,7 @@ router.get('/settings', (req, res) => {
 
 router.post('/settings', (req, res) => {
   const db = getDb();
-  const allowed = ['phone', 'address', 'email', 'vk', 'telegram', 'whatsapp', 'avito', 'site_name', 'site_tagline', 'banner_active', 'banner_title', 'banner_text', 'yandex_verification', 'yandex_metrika_id'];
+  const allowed = ['phone', 'address', 'email', 'vk', 'telegram', 'whatsapp', 'avito', 'site_name', 'site_tagline', 'banner_active', 'banner_title', 'banner_text', 'yandex_verification', 'yandex_metrika_id', 'fabric_url_chairs', 'fabric_url_beds'];
   const update = db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
 
   for (const key of allowed) {
