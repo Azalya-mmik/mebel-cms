@@ -5,7 +5,7 @@
 :root{--bg:#F3EEE2;--surface:#FCFAF3;--pine:#21372F;--honey:#D98E3C;--honey-d:#BE7626;--ink:#23302A;--muted:#6E7C72;--line:#E2DACB;--r:18px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font-family:"Nunito","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.45;padding-bottom:92px}
-header{position:sticky;top:0;z-index:30;background:var(--pine);color:#F4EFE3;padding:12px 14px;border-radius:0 0 22px 22px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+header{position:sticky;top:0;z-index:30;background:var(--pine);color:#F4EFE3;padding:12px 14px}
 .hbar{display:flex;align-items:center;gap:10px;max-width:680px;margin:0 auto}
 .back{background:#ffffff1a;border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:19px;cursor:pointer;flex:0 0 auto;display:none}
 .back.show{display:block}
@@ -16,8 +16,8 @@ header{position:sticky;top:0;z-index:30;background:var(--pine);color:#F4EFE3;pad
 .cartbtn svg{width:21px;height:21px}
 .badge{position:absolute;top:-3px;right:-3px;background:var(--honey);color:#fff;font-size:11px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:none;align-items:center;justify-content:center;padding:0 4px}
 .badge.show{display:flex}
-.hcontact{display:flex;align-items:center;gap:11px;margin:11px auto 0;max-width:680px;background:#ffffff14;border-radius:14px;padding:8px 10px;text-decoration:none;overflow:hidden;max-height:80px;opacity:1;will-change:max-height,opacity,margin-top,padding-top,padding-bottom;transition:max-height .32s cubic-bezier(.22,.61,.36,1),opacity .22s ease,margin-top .32s cubic-bezier(.22,.61,.36,1),padding-top .32s cubic-bezier(.22,.61,.36,1),padding-bottom .32s cubic-bezier(.22,.61,.36,1)}
-.hcontact.hide{max-height:0;opacity:0;margin-top:0;padding-top:0;padding-bottom:0;pointer-events:none}
+.hcband{background:var(--pine);border-radius:0 0 22px 22px;box-shadow:0 4px 18px rgba(0,0,0,.12);padding-bottom:2px}
+.hcontact{display:flex;align-items:center;gap:11px;margin:0 auto;max-width:680px;padding:8px 10px 12px;text-decoration:none;color:#F4EFE3}
 .hactions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .hicon{display:flex;align-items:center;justify-content:center;height:32px;padding:0 10px;border-radius:999px;color:#fff;text-decoration:none;font-size:11.5px;font-weight:900;letter-spacing:.2px;flex:0 0 auto;white-space:nowrap}
 .hicon.htg{background:#229ED9}
@@ -62,8 +62,8 @@ header{position:sticky;top:0;z-index:30;background:var(--pine);color:#F4EFE3;pad
 .tile b{font-size:12.5px;font-weight:800;display:block;margin-top:5px}.tile span{font-size:10.5px;color:var(--muted);display:block;padding:0 4px;line-height:1.2}
 .opts{display:flex;flex-wrap:wrap;gap:8px}
 .opt{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 15px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;color:var(--ink)}.opt.on{border-color:var(--pine);background:var(--pine);color:#fff}
-.swatches{display:flex;gap:9px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}.swatches::-webkit-scrollbar{height:6px}.swatches::-webkit-scrollbar-thumb{background:#cdc6b6;border-radius:99px}
-.sw{flex:0 0 auto;width:52px;height:52px;border-radius:50%;cursor:pointer;border:2px solid #0001;display:flex;align-items:flex-end;justify-content:center;font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 2px #0008;padding-bottom:4px;scroll-snap-align:start}.sw.on{outline:3px solid var(--pine);outline-offset:1px}
+.swatches{display:flex;gap:12px;overflow-x:auto;padding:6px 2px 14px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}.swatches::-webkit-scrollbar{height:6px}.swatches::-webkit-scrollbar-thumb{background:#cdc6b6;border-radius:99px}
+.sw{flex:0 0 auto;width:72px;height:72px;border-radius:50%;cursor:pointer;border:2px solid #0001;display:flex;align-items:flex-end;justify-content:center;font-size:14px;font-weight:800;color:#fff;text-shadow:0 1px 2px #0008;padding-bottom:6px;scroll-snap-align:start}.sw.on{outline:3px solid var(--pine);outline-offset:2px}
 .bedadd{width:100%;border:none;cursor:pointer;font-family:inherit;background:var(--honey);color:#fff;font-weight:800;font-size:16px;padding:15px;border-radius:14px;margin-top:20px}.bedadd:active{background:var(--honey-d)}.bedadd:disabled,.bedadd.disabled{background:#cdc8bf;color:#fff;cursor:not-allowed;font-size:14.5px}
 .cart-h{font-size:21px;font-weight:800;margin:20px 2px 14px}
 .citem{display:flex;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
@@ -101,8 +101,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
       <span class="badge" id="cartBadge"></span>
     </button>
   </div>
-  <div class="hcontact" id="hContact"><img class="cav" id="cav" alt="директор"><div class="ci"><b id="dirName"></b><span id="dirTitle"></span><span id="dirPhone" class="dirphone"></span></div><div class="hactions"><a class="hicon htg" id="hTgBtn" href="https://t.me/MVildi" target="_blank" rel="noopener" aria-label="Написать в Telegram">Telegram</a><a class="hicon hmax" id="hMaxBtn" href="#" target="_blank" rel="noopener" aria-label="Написать в MAX">MAX</a><a class="callbtn" id="hCallBtn" href="#">Позвонить</a></div></div>
 </header>
+<div class="hcband"><div class="hcontact" id="hContact"><img class="cav" id="cav" alt="директор"><div class="ci"><b id="dirName"></b><span id="dirTitle"></span><span id="dirPhone" class="dirphone"></span></div><div class="hactions"><a class="hicon htg" id="hTgBtn" href="https://t.me/MVildi" target="_blank" rel="noopener" aria-label="Написать в Telegram">Telegram</a><a class="hicon hmax" id="hMaxBtn" href="#" target="_blank" rel="noopener" aria-label="Написать в MAX">MAX</a><a class="callbtn" id="hCallBtn" href="#">Позвонить</a></div></div></div>
 <div class="wrap">
   <div id="vHome">
     <section class="lp-section" id="lpCatalog" style="margin-top:14px">
@@ -602,35 +602,6 @@ function cookieBarAccept(){
   }catch(e){}
   var b=document.getElementById("cookieBar");
   if(b)setTimeout(function(){b.style.display="";},600);
-})();
-(function(){
-  var hc=document.getElementById("hContact");
-  if(!hc)return;
-  var fullH=hc.scrollHeight;
-  if(fullH)hc.style.maxHeight=fullH+"px";
-  var lastY=window.scrollY||0,ticking=false,hidden=false;
-  window.addEventListener("load",function(){
-    var h=hc.scrollHeight;
-    if(h){fullH=h;if(!hidden)hc.style.maxHeight=h+"px";}
-  });
-  function setHidden(v){
-    if(v===hidden)return;
-    hidden=v;
-    if(v){hc.classList.add("hide");hc.style.maxHeight="0px";}
-    else{hc.classList.remove("hide");hc.style.maxHeight=fullH+"px";}
-  }
-  function onScroll(){
-    var y=window.scrollY||0;
-    var delta=y-lastY;
-    if(!hidden&&delta>6&&y>60){setHidden(true);}
-    else if(hidden&&delta<-6){setHidden(false);}
-    else if(y<=60&&hidden){setHidden(false);}
-    lastY=y<0?0:y;
-    ticking=false;
-  }
-  window.addEventListener("scroll",function(){
-    if(!ticking){window.requestAnimationFrame(onScroll);ticking=true;}
-  },{passive:true});
 })();
 function rtApplyContact(settings){
   if(!settings||!settings.phone)return;
