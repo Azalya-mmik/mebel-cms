@@ -16,7 +16,12 @@ header{position:sticky;top:0;z-index:30;background:var(--pine);color:#F4EFE3;pad
 .cartbtn svg{width:21px;height:21px}
 .badge{position:absolute;top:-3px;right:-3px;background:var(--honey);color:#fff;font-size:11px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:none;align-items:center;justify-content:center;padding:0 4px}
 .badge.show{display:flex}
-.hcontact{display:flex;align-items:center;gap:11px;margin:11px auto 0;max-width:680px;background:#ffffff14;border-radius:14px;padding:8px 10px;text-decoration:none}
+.hcontact{display:flex;align-items:center;gap:11px;margin:11px auto 0;max-width:680px;background:#ffffff14;border-radius:14px;padding:8px 10px;text-decoration:none;overflow:hidden;max-height:80px;opacity:1;transition:max-height .28s ease,opacity .22s ease,margin-top .28s ease,padding .28s ease}
+.hcontact.hide{max-height:0;opacity:0;margin-top:0;padding-top:0;padding-bottom:0;pointer-events:none}
+.hactions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.hicon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:#fff;text-decoration:none;font-size:15px;font-weight:800;flex:0 0 auto}
+.hicon.htg{background:#229ED9}
+.hicon.hmax{background:#6E54E8}
 .cav{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:2px solid #ffffff33}
 .hcontact .ci{flex:1;min-width:0;display:flex;flex-direction:column}
 .hcontact .ci b{color:#fff;font-size:13.5px;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -96,7 +101,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 8px
       <span class="badge" id="cartBadge"></span>
     </button>
   </div>
-  <a class="hcontact" id="hContact" href="#"><img class="cav" id="cav" alt="директор"><div class="ci"><b id="dirName"></b><span id="dirTitle"></span><span id="dirPhone" class="dirphone"></span></div><span class="callbtn">Позвонить</span></a>
+  <div class="hcontact" id="hContact"><img class="cav" id="cav" alt="директор"><div class="ci"><b id="dirName"></b><span id="dirTitle"></span><span id="dirPhone" class="dirphone"></span></div><div class="hactions"><a class="hicon htg" id="hTgBtn" href="https://t.me/MVildi" target="_blank" rel="noopener" aria-label="Написать в Telegram">✈</a><a class="hicon hmax" id="hMaxBtn" href="#" target="_blank" rel="noopener" aria-label="Написать в MAX">M</a><a class="callbtn" id="hCallBtn" href="#">Позвонить</a></div></div>
 </header>
 <div class="wrap">
   <div id="vHome">
@@ -242,7 +247,9 @@ document.getElementById("hSub").textContent=CONFIG.subtitle;
 document.getElementById("cav").src=CONFIG.directorImg;
 document.getElementById("dirName").textContent=CONFIG.director;var _pd=CONFIG.phone.replace(/\D/g,"");document.getElementById("dirPhone").textContent="+7 "+_pd.slice(1,4)+" "+_pd.slice(4,7)+"-"+_pd.slice(7,9)+"-"+_pd.slice(9,11);
 document.getElementById("dirTitle").textContent="Директор · "+CONFIG.shopName;
-document.getElementById("hContact").href="tel:"+CONFIG.phone;
+document.getElementById("hCallBtn").href="tel:"+CONFIG.phone;
+if(CONFIG.telegram)document.getElementById("hTgBtn").href=CONFIG.telegram;
+if(CONFIG.max)document.getElementById("hMaxBtn").href=CONFIG.max;
 document.getElementById("foot").textContent=CONFIG.shopName+" · Доставка по России";
 document.getElementById("homeBanketka").src=(CHAIRS.find(p=>p.type==="Банкетки")||CHAIRS[0]).imgs[0];
 const TILE_BEDS=[CELLS.t1_base,CELLS.t1_feet,CELLS.t1_air];
@@ -575,18 +582,34 @@ function cookieBarAccept(){
   var b=document.getElementById("cookieBar");
   if(b)setTimeout(function(){b.style.display="";},600);
 })();
+(function(){
+  var hc=document.getElementById("hContact");
+  if(!hc)return;
+  var lastY=window.scrollY||0,ticking=false;
+  function onScroll(){
+    var y=window.scrollY||0;
+    if(y>lastY&&y>60){hc.classList.add("hide");}
+    else if(y<lastY){hc.classList.remove("hide");}
+    lastY=y<0?0:y;
+    ticking=false;
+  }
+  window.addEventListener("scroll",function(){
+    if(!ticking){window.requestAnimationFrame(onScroll);ticking=true;}
+  },{passive:true});
+})();
 function rtApplyContact(settings){
   if(!settings||!settings.phone)return;
   CONFIG.phone=settings.phone;
   var _pd=CONFIG.phone.replace(/\D/g,"");
   var dp=document.getElementById("dirPhone"); if(dp)dp.textContent="+7 "+_pd.slice(1,4)+" "+_pd.slice(4,7)+"-"+_pd.slice(7,9)+"-"+_pd.slice(9,11);
-  var hc=document.getElementById("hContact"); if(hc)hc.href="tel:"+CONFIG.phone;
+  var hcb=document.getElementById("hCallBtn"); if(hcb)hcb.href="tel:"+CONFIG.phone;
   buildLinks();
 }
 function rtRenderSocial(settings){
   if(!settings)return;
   if(settings.vk){var a=document.getElementById("socVk");if(a)a.href=settings.vk;CONFIG.vk=settings.vk;}
-  if(settings.telegram){var t=document.getElementById("socTg");if(t)t.href=settings.telegram;CONFIG.telegram=settings.telegram;}
+  if(settings.telegram){var t=document.getElementById("socTg");if(t)t.href=settings.telegram;CONFIG.telegram=settings.telegram;var ht=document.getElementById("hTgBtn");if(ht)ht.href=settings.telegram;}
+  if(settings.max){CONFIG.max=settings.max;var hm=document.getElementById("hMaxBtn");if(hm)hm.href=settings.max;}
   if(settings.avito){var av=document.getElementById("socAvito");if(av)av.href=settings.avito;}
   if(settings.whatsapp){
     var wa=document.getElementById("socWa");
