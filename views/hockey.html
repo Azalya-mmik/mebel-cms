@@ -6,6 +6,33 @@
   <title>Hockey OS Ultimate</title>
   <style>
     :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#111827;--soft:#f3f4f6;--danger:#b91c1c;--radius:18px}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}.app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}aside{background:#0f172a;color:#fff;padding:24px;position:sticky;top:0;height:100vh;overflow-y:auto}.logo{font-size:24px;font-weight:900;margin-bottom:6px;letter-spacing:-.04em}.subtitle{color:#cbd5e1;font-size:13px;margin-bottom:28px;line-height:1.4}.nav button{width:100%;border:0;background:transparent;color:#cbd5e1;text-align:left;padding:12px 14px;border-radius:12px;cursor:pointer;font-size:15px;margin-bottom:4px}.nav button:hover,.nav button.active{background:rgba(255,255,255,.1);color:white}main{padding:32px;max-width:1180px;width:100%;margin:0 auto}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:24px}h1{margin:0;font-size:34px;letter-spacing:-.05em}.muted{color:var(--muted)}.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 25px rgba(15,23,42,.04)}.stat-number{font-size:30px;font-weight:900;letter-spacing:-.04em}.stat-label{color:var(--muted);font-size:13px;margin-top:4px}input,textarea,select{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff;outline:none}textarea{min-height:160px;resize:vertical;line-height:1.5}input:focus,textarea:focus,select:focus{border-color:#111827}label{font-size:13px;font-weight:700;display:block;margin-bottom:7px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.btn{border:0;background:var(--accent);color:white;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800;font-size:14px}.btn.secondary{background:var(--soft);color:var(--text);border:1px solid var(--line)}.btn.danger{background:var(--danger)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.entry{border:1px solid var(--line);border-radius:16px;padding:16px;background:white;margin-bottom:12px}.entry-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px}.badge{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border:1px solid var(--line);padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.entry-title{font-weight:900;font-size:18px;margin-bottom:4px}.entry-text{white-space:pre-wrap;line-height:1.5;color:#1f2937}.search-row{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:12px;margin-bottom:16px}.hidden{display:none}.empty{text-align:center;padding:38px;color:var(--muted);border:1px dashed var(--line);border-radius:var(--radius);background:white}.quote{background:#111827;color:white;border-radius:var(--radius);padding:22px;line-height:1.5;margin-bottom:18px}.quote b{color:white}.small{font-size:13px;color:var(--muted);line-height:1.45}@media(max-width:850px){.app{grid-template-columns:1fr}aside{position:relative;height:auto}main{padding:18px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid,.search-row{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}}
+
+    /* --- Мой день --- */
+    .day-toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+    .day-toolbar input[type="date"]{width:auto;min-width:180px}
+    .progress-wrap{display:flex;align-items:center;gap:14px}
+    .progress-bar{flex:1;min-width:160px;height:14px;background:var(--soft);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .progress-fill{height:100%;background:#111827;border-radius:999px;transition:width .25s ease}
+    .progress-pct{font-weight:900;font-size:16px;min-width:46px;text-align:right}
+    .missing-box{margin-top:10px;font-size:13px;color:var(--muted);line-height:1.6}
+    .missing-box b{color:var(--text)}
+    .section-block{margin-bottom:18px}
+    .section-title{font-weight:900;font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+    .scale-row{display:flex;gap:6px;flex-wrap:wrap}
+    .scale-btn{border:1px solid var(--line);background:#fff;border-radius:10px;width:38px;height:38px;cursor:pointer;font-weight:800;font-size:14px}
+    .scale-btn.active{background:#111827;color:#fff;border-color:#111827}
+    .water-row{display:flex;align-items:center;gap:12px}
+    .water-btn{border:1px solid var(--line);background:var(--soft);width:40px;height:40px;border-radius:10px;font-size:18px;font-weight:900;cursor:pointer}
+    .water-count{font-size:22px;font-weight:900;min-width:70px;text-align:center}
+    .toggle-row{display:flex;gap:8px;flex-wrap:wrap}
+    .toggle-chip{border:1px solid var(--line);background:#fff;padding:9px 14px;border-radius:999px;cursor:pointer;font-weight:700;font-size:13px}
+    .toggle-chip.active{background:#111827;color:#fff;border-color:#111827}
+    .meal-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff;margin-bottom:12px}
+    .meal-title{font-weight:800;font-size:14px;margin-bottom:10px}
+    .meal-grid{display:grid;grid-template-columns:1.4fr .8fr .8fr 1.4fr;gap:10px}
+    .meal-grid input{padding:10px 12px;font-size:13px}
+    .nutrition-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    @media(max-width:850px){.meal-grid{grid-template-columns:1fr 1fr}.nutrition-summary-grid{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
@@ -15,6 +42,7 @@
       <div class="subtitle">Личная база опыта игрока, будущего тренера и основателя.</div>
       <div class="nav">
         <button class="active" onclick="showPage('home', this)">🏠 Главная</button>
+        <button onclick="showPage('myday', this)">📅 Мой день</button>
         <button onclick="showPage('new', this)">➕ Новая запись</button>
         <button onclick="showPage('entries', this)">📚 Все записи</button>
         <button onclick="quickFilter('Проблема', this)">⚠️ Проблемы</button>
@@ -41,6 +69,144 @@
           <div class="actions"><button class="btn" onclick="saveEntry()">Сохранить</button><button class="btn secondary" onclick="clearForm()">Очистить</button></div>
         </div>
       </section>
+      <section id="myday" class="page hidden">
+        <div class="top">
+          <div><h1>Мой день</h1><div class="muted">Заполняй по датам — данные сохраняются отдельно для каждого дня.</div></div>
+        </div>
+
+        <div class="card">
+          <div class="day-toolbar">
+            <div style="min-width:180px"><label>Дата</label><input id="mdDate" type="date" onchange="onMdDateChange()" /></div>
+            <div class="progress-wrap" style="flex:1">
+              <div class="progress-bar"><div class="progress-fill" id="mdProgressFill" style="width:0%"></div></div>
+              <div class="progress-pct" id="mdProgressPct">0%</div>
+            </div>
+          </div>
+          <div class="missing-box" id="mdMissingBox"></div>
+        </div>
+
+        <div class="card section-block">
+          <div class="section-title">😴 Сон</div>
+          <div class="form-grid">
+            <div><label>Время сна</label><input id="mdSleepStart" type="time" oninput="onMdInput()" /></div>
+            <div><label>Время пробуждения</label><input id="mdSleepEnd" type="time" oninput="onMdInput()" /></div>
+          </div>
+          <div class="form-grid">
+            <div><label>Количество часов</label><input id="mdSleepHours" type="number" step="0.1" min="0" max="24" placeholder="напр. 7.5" oninput="onMdInput()" /></div>
+            <div><label>Качество сна (1–10)</label><div class="scale-row" id="mdSleepQualityRow"></div></div>
+          </div>
+        </div>
+
+        <div class="grid section-block" style="grid-template-columns:1fr 1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="section-title">😊 Настроение (1–10)</div>
+            <div class="scale-row" id="mdMoodRow"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">⚡ Энергия (1–10)</div>
+            <div class="scale-row" id="mdEnergyRow"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">⚖️ Вес</div>
+            <input id="mdWeight" type="number" step="0.1" min="0" placeholder="кг" oninput="onMdInput()" />
+          </div>
+        </div>
+
+        <div class="card section-block">
+          <div class="section-title">💧 Вода</div>
+          <div class="water-row">
+            <button type="button" class="water-btn" onclick="mdWaterChange(-1)">−</button>
+            <div class="water-count"><span id="mdWaterCount">0</span> <span style="font-size:13px;color:var(--muted);font-weight:600">стак.</span></div>
+            <button type="button" class="water-btn" onclick="mdWaterChange(1)">+</button>
+            <div class="muted" style="font-size:13px">≈ <span id="mdWaterMl">0</span> мл (1 стакан = 250 мл)</div>
+          </div>
+        </div>
+
+        <div class="card section-block">
+          <div class="section-title">🍽 Питание</div>
+
+          <div class="meal-card">
+            <div class="meal-title">Завтрак</div>
+            <div class="meal-grid">
+              <input id="mdMealBreakfastDesc" placeholder="Что съел" oninput="onMdInput()" />
+              <input id="mdMealBreakfastCal" type="number" min="0" placeholder="Ккал" oninput="onMdInput()" />
+              <input id="mdMealBreakfastProtein" type="number" min="0" placeholder="Белок, г" oninput="onMdInput()" />
+              <input id="mdMealBreakfastComment" placeholder="Комментарий" oninput="onMdInput()" />
+            </div>
+          </div>
+
+          <div class="meal-card">
+            <div class="meal-title">Обед</div>
+            <div class="meal-grid">
+              <input id="mdMealLunchDesc" placeholder="Что съел" oninput="onMdInput()" />
+              <input id="mdMealLunchCal" type="number" min="0" placeholder="Ккал" oninput="onMdInput()" />
+              <input id="mdMealLunchProtein" type="number" min="0" placeholder="Белок, г" oninput="onMdInput()" />
+              <input id="mdMealLunchComment" placeholder="Комментарий" oninput="onMdInput()" />
+            </div>
+          </div>
+
+          <div class="meal-card">
+            <div class="meal-title">Ужин</div>
+            <div class="meal-grid">
+              <input id="mdMealDinnerDesc" placeholder="Что съел" oninput="onMdInput()" />
+              <input id="mdMealDinnerCal" type="number" min="0" placeholder="Ккал" oninput="onMdInput()" />
+              <input id="mdMealDinnerProtein" type="number" min="0" placeholder="Белок, г" oninput="onMdInput()" />
+              <input id="mdMealDinnerComment" placeholder="Комментарий" oninput="onMdInput()" />
+            </div>
+          </div>
+
+          <div class="meal-card">
+            <div class="meal-title">Перекусы</div>
+            <div class="meal-grid">
+              <input id="mdMealSnacksDesc" placeholder="Что съел" oninput="onMdInput()" />
+              <input id="mdMealSnacksCal" type="number" min="0" placeholder="Ккал" oninput="onMdInput()" />
+              <input id="mdMealSnacksProtein" type="number" min="0" placeholder="Белок, г" oninput="onMdInput()" />
+              <input id="mdMealSnacksComment" placeholder="Комментарий" oninput="onMdInput()" />
+            </div>
+          </div>
+
+          <div class="meal-title" style="margin-top:6px">Итог питания за день</div>
+          <div class="nutrition-summary-grid">
+            <div><label>Общие калории</label><input id="mdNutTotalCal" type="number" readonly placeholder="0" /></div>
+            <div><label>Общий белок, г</label><input id="mdNutTotalProtein" type="number" readonly placeholder="0" /></div>
+            <div><label>Углеводы, г</label><input id="mdNutCarbs" type="number" min="0" placeholder="г" oninput="onMdInput()" /></div>
+            <div><label>Оценка питания (1–10)</label><div class="scale-row" id="mdNutRatingRow"></div></div>
+          </div>
+          <div style="margin-top:12px;max-width:280px">
+            <label>Статус</label>
+            <select id="mdNutStatus" onchange="onMdInput()">
+              <option value="">Не выбрано</option>
+              <option value="Недобор">Недобор</option>
+              <option value="Норма">Норма</option>
+              <option value="Перебор">Перебор</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card section-block">
+          <div class="section-title">🏒 Тренировки</div>
+          <div class="toggle-row" id="mdTrainingRow">
+            <button type="button" class="toggle-chip" data-key="ice" onclick="mdToggleTraining('ice')">Лёд</button>
+            <button type="button" class="toggle-chip" data-key="gym" onclick="mdToggleTraining('gym')">Зал</button>
+            <button type="button" class="toggle-chip" data-key="run" onclick="mdToggleTraining('run')">Бег</button>
+            <button type="button" class="toggle-chip" data-key="stretch" onclick="mdToggleTraining('stretch')">Растяжка</button>
+            <button type="button" class="toggle-chip" data-key="rest" onclick="mdToggleTraining('rest')">Отдых</button>
+          </div>
+        </div>
+
+        <div class="card section-block">
+          <div class="section-title">📝 Мысль дня</div>
+          <textarea id="mdThought" style="min-height:90px" placeholder="Короткая заметка..." oninput="onMdInput()"></textarea>
+        </div>
+
+        <div class="card section-block">
+          <div class="section-title">⭐ Итог дня</div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr">
+            <div><label>Что получилось?</label><textarea id="mdGood" style="min-height:90px" oninput="onMdInput()"></textarea></div>
+            <div><label>Что можно улучшить?</label><textarea id="mdImprove" style="min-height:90px" oninput="onMdInput()"></textarea></div>
+          </div>
+        </div>
+      </section>
       <section id="entries" class="page hidden">
         <div class="top"><div><h1>Все записи</h1><div class="muted">Поиск, фильтры и быстрый просмотр всей базы.</div></div></div>
         <div class="search-row"><input id="search" placeholder="Поиск: сон, Калуга, тренер..." oninput="renderEntries()" /><select id="filterType" onchange="renderEntries()"><option value="">Все типы</option><option>Дневник</option><option>Проблема</option><option>Идея</option><option>Тренировка</option><option>Матч</option><option>Цитата тренера</option><option>Вопрос</option><option>Исследование</option><option>База знаний</option><option>Ошибка</option></select><select id="sort" onchange="renderEntries()"><option value="new">Сначала новые</option><option value="old">Сначала старые</option></select></div>
@@ -53,7 +219,250 @@
     </main>
   </div>
 <script>
-const STORAGE_KEY="hockey_os_entries_v1";function getEntries(){return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}function setEntries(entries){localStorage.setItem(STORAGE_KEY,JSON.stringify(entries));updateStats()}function todayISO(){return new Date().toISOString().slice(0,10)}document.getElementById("date").value=todayISO();function showPage(id,btn){document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));if(btn)btn.classList.add("active");if(id==="entries")renderEntries();if(id==="home")updateStats()}function saveEntry(){const type=document.getElementById("type").value,date=document.getElementById("date").value||todayISO(),title=document.getElementById("title").value.trim(),tags=document.getElementById("tags").value.trim(),text=document.getElementById("text").value.trim();if(!title&&!text){alert("Напиши хотя бы заголовок или текст.");return}const entries=getEntries();entries.unshift({id:Date.now(),type,date,title:title||"Без заголовка",tags,text,createdAt:new Date().toISOString()});setEntries(entries);clearForm();showPage("home")}function clearForm(){document.getElementById("title").value="";document.getElementById("tags").value="";document.getElementById("text").value="";document.getElementById("date").value=todayISO()}function escapeHTML(str){return(str||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}function entryHTML(e){return `<div class="entry"><div class="entry-head"><div><div class="entry-title">${escapeHTML(e.title)}</div><div class="small">${escapeHTML(e.date)} · ${escapeHTML(e.tags||"без тегов")}</div></div><span class="badge">${escapeHTML(e.type)}</span></div><div class="entry-text">${escapeHTML(e.text)}</div><div class="actions"><button class="btn secondary" onclick="copyEntry(${e.id})">Копировать</button><button class="btn danger" onclick="deleteEntry(${e.id})">Удалить</button></div></div>`}function renderEntries(){let entries=getEntries();const q=(document.getElementById("search").value||"").toLowerCase(),type=document.getElementById("filterType").value,sort=document.getElementById("sort").value;entries=entries.filter(e=>{const hay=`${e.type} ${e.date} ${e.title} ${e.tags} ${e.text}`.toLowerCase();return(!q||hay.includes(q))&&(!type||e.type===type)});entries.sort((a,b)=>sort==="old"?new Date(a.date)-new Date(b.date):new Date(b.date)-new Date(a.date));document.getElementById("entriesList").innerHTML=entries.length?entries.map(entryHTML).join(""):`<div class="empty">Пока ничего не найдено.</div>`}function quickFilter(type,btn){showPage("entries",btn);document.getElementById("filterType").value=type;document.getElementById("search").value="";renderEntries()}function deleteEntry(id){if(!confirm("Удалить запись?"))return;setEntries(getEntries().filter(e=>e.id!==id));renderEntries()}function copyEntry(id){const e=getEntries().find(x=>x.id===id);if(!e)return;const text=`# ${e.title}\n\nТип: ${e.type}\nДата: ${e.date}\nТеги: ${e.tags}\n\n${e.text}`;navigator.clipboard.writeText(text);alert("Запись скопирована.")}function updateStats(){const entries=getEntries(),today=todayISO();document.getElementById("statAll").textContent=entries.length;document.getElementById("statProblems").textContent=entries.filter(e=>e.type==="Проблема").length;document.getElementById("statIdeas").textContent=entries.filter(e=>e.type==="Идея").length;document.getElementById("statToday").textContent=entries.filter(e=>e.date===today).length;const latest=entries.slice(0,5);document.getElementById("latestEntries").innerHTML=latest.length?latest.map(entryHTML).join(""):`<div class="empty">Пока записей нет. Начни с первой мысли со сборов.</div>`}function download(filename,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url)}function exportJSON(){download(`hockey-os-export-${todayISO()}.json`,JSON.stringify(getEntries(),null,2),"application/json")}function exportMarkdown(){const md=getEntries().map(e=>`# ${e.title}\n\n**Тип:** ${e.type}  \n**Дата:** ${e.date}  \n**Теги:** ${e.tags||"без тегов"}\n\n${e.text}\n\n---`).join("\n\n");download(`hockey-os-export-${todayISO()}.md`,md,"text/markdown")}function importJSON(){const file=document.getElementById("importFile").files[0];if(!file){alert("Выбери JSON-файл.");return}const reader=new FileReader();reader.onload=()=>{try{const imported=JSON.parse(reader.result);if(!Array.isArray(imported))throw new Error("wrong");setEntries([...imported,...getEntries()]);alert("Импорт готов.");showPage("home")}catch{alert("Не удалось импортировать файл.")}};reader.readAsText(file)}function clearAll(){if(!confirm("Точно удалить ВСЁ? Лучше сначала сделай экспорт."))return;localStorage.removeItem(STORAGE_KEY);updateStats()}updateStats();
+const STORAGE_KEY="hockey_os_entries_v1";function getEntries(){return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}function setEntries(entries){localStorage.setItem(STORAGE_KEY,JSON.stringify(entries));updateStats()}function todayISO(){return new Date().toISOString().slice(0,10)}document.getElementById("date").value=todayISO();function showPage(id,btn){document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));if(btn)btn.classList.add("active");if(id==="entries")renderEntries();if(id==="home")updateStats();if(id==="myday")loadMdForDate(document.getElementById("mdDate").value||todayISO())}function saveEntry(){const type=document.getElementById("type").value,date=document.getElementById("date").value||todayISO(),title=document.getElementById("title").value.trim(),tags=document.getElementById("tags").value.trim(),text=document.getElementById("text").value.trim();if(!title&&!text){alert("Напиши хотя бы заголовок или текст.");return}const entries=getEntries();entries.unshift({id:Date.now(),type,date,title:title||"Без заголовка",tags,text,createdAt:new Date().toISOString()});setEntries(entries);clearForm();showPage("home")}function clearForm(){document.getElementById("title").value="";document.getElementById("tags").value="";document.getElementById("text").value="";document.getElementById("date").value=todayISO()}function escapeHTML(str){return(str||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}function entryHTML(e){return `<div class="entry"><div class="entry-head"><div><div class="entry-title">${escapeHTML(e.title)}</div><div class="small">${escapeHTML(e.date)} · ${escapeHTML(e.tags||"без тегов")}</div></div><span class="badge">${escapeHTML(e.type)}</span></div><div class="entry-text">${escapeHTML(e.text)}</div><div class="actions"><button class="btn secondary" onclick="copyEntry(${e.id})">Копировать</button><button class="btn danger" onclick="deleteEntry(${e.id})">Удалить</button></div></div>`}function renderEntries(){let entries=getEntries();const q=(document.getElementById("search").value||"").toLowerCase(),type=document.getElementById("filterType").value,sort=document.getElementById("sort").value;entries=entries.filter(e=>{const hay=`${e.type} ${e.date} ${e.title} ${e.tags} ${e.text}`.toLowerCase();return(!q||hay.includes(q))&&(!type||e.type===type)});entries.sort((a,b)=>sort==="old"?new Date(a.date)-new Date(b.date):new Date(b.date)-new Date(a.date));document.getElementById("entriesList").innerHTML=entries.length?entries.map(entryHTML).join(""):`<div class="empty">Пока ничего не найдено.</div>`}function quickFilter(type,btn){showPage("entries",btn);document.getElementById("filterType").value=type;document.getElementById("search").value="";renderEntries()}function deleteEntry(id){if(!confirm("Удалить запись?"))return;setEntries(getEntries().filter(e=>e.id!==id));renderEntries()}function copyEntry(id){const e=getEntries().find(x=>x.id===id);if(!e)return;const text=`# ${e.title}\n\nТип: ${e.type}\nДата: ${e.date}\nТеги: ${e.tags}\n\n${e.text}`;navigator.clipboard.writeText(text);alert("Запись скопирована.")}function updateStats(){const entries=getEntries(),today=todayISO();document.getElementById("statAll").textContent=entries.length;document.getElementById("statProblems").textContent=entries.filter(e=>e.type==="Проблема").length;document.getElementById("statIdeas").textContent=entries.filter(e=>e.type==="Идея").length;document.getElementById("statToday").textContent=entries.filter(e=>e.date===today).length;const latest=entries.slice(0,5);document.getElementById("latestEntries").innerHTML=latest.length?latest.map(entryHTML).join(""):`<div class="empty">Пока записей нет. Начни с первой мысли со сборов.</div>`}function download(filename,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url)}function exportJSON(){download(`hockey-os-export-${todayISO()}.json`,JSON.stringify(getEntries(),null,2),"application/json")}function exportMarkdown(){const md=getEntries().map(e=>`# ${e.title}\n\n**Тип:** ${e.type}  \n**Дата:** ${e.date}  \n**Теги:** ${e.tags||"без тегов"}\n\n${e.text}\n\n---`).join("\n\n");download(`hockey-os-export-${todayISO()}.md`,md,"text/markdown")}function importJSON(){const file=document.getElementById("importFile").files[0];if(!file){alert("Выбери JSON-файл.");return}const reader=new FileReader();reader.onload=()=>{try{const imported=JSON.parse(reader.result);if(!Array.isArray(imported))throw new Error("wrong");setEntries([...imported,...getEntries()]);alert("Импорт готов.");showPage("home")}catch{alert("Не удалось импортировать файл.")}};reader.readAsText(file)}function clearAll(){if(!confirm("Точно удалить ВСЁ? Лучше сначала сделай экспорт."))return;localStorage.removeItem(STORAGE_KEY);updateStats()}updateStats();
+
+/* ================= Мой день ================= */
+const MD_KEY = "hockey_myday_v1";
+let mdCurrentDate = todayISO();
+let mdSuppressSave = false; // чтобы не сохранять во время программной загрузки формы
+
+function mdGetAll(){ try{ return JSON.parse(localStorage.getItem(MD_KEY) || "{}"); }catch(e){ return {}; } }
+function mdSaveAll(all){ localStorage.setItem(MD_KEY, JSON.stringify(all)); }
+
+function mdDefaultDay(date){
+  return {
+    date,
+    sleepStart:"", sleepEnd:"", sleepHours:"", sleepQuality:null,
+    mood:null, energy:null, weight:"",
+    water:0,
+    meals:{
+      breakfast:{desc:"",cal:"",protein:"",comment:""},
+      lunch:{desc:"",cal:"",protein:"",comment:""},
+      dinner:{desc:"",cal:"",protein:"",comment:""},
+      snacks:{desc:"",cal:"",protein:"",comment:""}
+    },
+    nutrition:{carbs:"", rating:null, status:""},
+    training:{ice:false,gym:false,run:false,stretch:false,rest:false},
+    thought:"", good:"", improve:""
+  };
+}
+
+function mdGetDay(date){
+  const all = mdGetAll();
+  return all[date] ? {...mdDefaultDay(date), ...all[date], meals:{...mdDefaultDay(date).meals, ...(all[date].meals||{})}, nutrition:{...mdDefaultDay(date).nutrition, ...(all[date].nutrition||{})}, training:{...mdDefaultDay(date).training, ...(all[date].training||{})} } : mdDefaultDay(date);
+}
+
+function mdSetDay(date, data){
+  const all = mdGetAll();
+  all[date] = data;
+  mdSaveAll(all);
+}
+
+// генерация шкал 1-10
+function mdBuildScale(containerId, value, onPick){
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  for(let i=1;i<=10;i++){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "scale-btn" + (value===i ? " active" : "");
+    b.textContent = i;
+    b.onclick = () => onPick(i);
+    el.appendChild(b);
+  }
+}
+
+function mdPickSleepQuality(v){ const d=mdGetDay(mdCurrentDate); d.sleepQuality=v; mdSetDay(mdCurrentDate,d); mdBuildScale("mdSleepQualityRow", v, mdPickSleepQuality); mdRenderProgress(d); }
+function mdPickMood(v){ const d=mdGetDay(mdCurrentDate); d.mood=v; mdSetDay(mdCurrentDate,d); mdBuildScale("mdMoodRow", v, mdPickMood); mdRenderProgress(d); }
+function mdPickEnergy(v){ const d=mdGetDay(mdCurrentDate); d.energy=v; mdSetDay(mdCurrentDate,d); mdBuildScale("mdEnergyRow", v, mdPickEnergy); mdRenderProgress(d); }
+function mdPickNutRating(v){ const d=mdGetDay(mdCurrentDate); d.nutrition.rating=v; mdSetDay(mdCurrentDate,d); mdBuildScale("mdNutRatingRow", v, mdPickNutRating); mdRenderProgress(d); }
+
+function onMdDateChange(){
+  mdCurrentDate = document.getElementById("mdDate").value || todayISO();
+  loadMdForDate(mdCurrentDate);
+}
+
+function loadMdForDate(date){
+  mdCurrentDate = date;
+  mdSuppressSave = true;
+  document.getElementById("mdDate").value = date;
+  const d = mdGetDay(date);
+
+  document.getElementById("mdSleepStart").value = d.sleepStart || "";
+  document.getElementById("mdSleepEnd").value = d.sleepEnd || "";
+  document.getElementById("mdSleepHours").value = d.sleepHours || "";
+  mdBuildScale("mdSleepQualityRow", d.sleepQuality, mdPickSleepQuality);
+
+  document.getElementById("mdWeight").value = d.weight || "";
+
+  mdBuildScale("mdMoodRow", d.mood, mdPickMood);
+  mdBuildScale("mdEnergyRow", d.energy, mdPickEnergy);
+  mdBuildScale("mdNutRatingRow", d.nutrition.rating, mdPickNutRating);
+
+  document.getElementById("mdWaterCount").textContent = d.water || 0;
+  document.getElementById("mdWaterMl").textContent = (d.water || 0) * 250;
+
+  document.getElementById("mdMealBreakfastDesc").value = d.meals.breakfast.desc || "";
+  document.getElementById("mdMealBreakfastCal").value = d.meals.breakfast.cal || "";
+  document.getElementById("mdMealBreakfastProtein").value = d.meals.breakfast.protein || "";
+  document.getElementById("mdMealBreakfastComment").value = d.meals.breakfast.comment || "";
+
+  document.getElementById("mdMealLunchDesc").value = d.meals.lunch.desc || "";
+  document.getElementById("mdMealLunchCal").value = d.meals.lunch.cal || "";
+  document.getElementById("mdMealLunchProtein").value = d.meals.lunch.protein || "";
+  document.getElementById("mdMealLunchComment").value = d.meals.lunch.comment || "";
+
+  document.getElementById("mdMealDinnerDesc").value = d.meals.dinner.desc || "";
+  document.getElementById("mdMealDinnerCal").value = d.meals.dinner.cal || "";
+  document.getElementById("mdMealDinnerProtein").value = d.meals.dinner.protein || "";
+  document.getElementById("mdMealDinnerComment").value = d.meals.dinner.comment || "";
+
+  document.getElementById("mdMealSnacksDesc").value = d.meals.snacks.desc || "";
+  document.getElementById("mdMealSnacksCal").value = d.meals.snacks.cal || "";
+  document.getElementById("mdMealSnacksProtein").value = d.meals.snacks.protein || "";
+  document.getElementById("mdMealSnacksComment").value = d.meals.snacks.comment || "";
+
+  document.getElementById("mdNutCarbs").value = d.nutrition.carbs || "";
+  document.getElementById("mdNutStatus").value = d.nutrition.status || "";
+
+  document.querySelectorAll("#mdTrainingRow .toggle-chip").forEach(btn=>{
+    const key = btn.getAttribute("data-key");
+    btn.classList.toggle("active", !!d.training[key]);
+  });
+
+  document.getElementById("mdThought").value = d.thought || "";
+  document.getElementById("mdGood").value = d.good || "";
+  document.getElementById("mdImprove").value = d.improve || "";
+
+  mdRecalcNutritionTotals(d);
+  mdSetDay(date, d);
+  mdSuppressSave = false;
+  mdRenderProgress(d);
+}
+
+function mdWaterChange(delta){
+  const d = mdGetDay(mdCurrentDate);
+  d.water = Math.max(0, (d.water||0) + delta);
+  document.getElementById("mdWaterCount").textContent = d.water;
+  document.getElementById("mdWaterMl").textContent = d.water * 250;
+  mdSetDay(mdCurrentDate, d);
+  mdRenderProgress(d);
+}
+
+function mdToggleTraining(key){
+  const d = mdGetDay(mdCurrentDate);
+  d.training[key] = !d.training[key];
+  document.querySelector(`#mdTrainingRow .toggle-chip[data-key="${key}"]`).classList.toggle("active", d.training[key]);
+  mdSetDay(mdCurrentDate, d);
+  mdRenderProgress(d);
+}
+
+function mdRecalcNutritionTotals(d){
+  const meals = d.meals;
+  const totalCal = ["breakfast","lunch","dinner","snacks"].reduce((s,k)=> s + (parseFloat(meals[k].cal)||0), 0);
+  const totalProtein = ["breakfast","lunch","dinner","snacks"].reduce((s,k)=> s + (parseFloat(meals[k].protein)||0), 0);
+  document.getElementById("mdNutTotalCal").value = totalCal || 0;
+  document.getElementById("mdNutTotalProtein").value = totalProtein || 0;
+  d.nutrition.totalCal = totalCal;
+  d.nutrition.totalProtein = totalProtein;
+}
+
+function mdCollectForm(){
+  const d = mdGetDay(mdCurrentDate);
+  d.sleepStart = document.getElementById("mdSleepStart").value;
+  d.sleepEnd = document.getElementById("mdSleepEnd").value;
+  d.sleepHours = document.getElementById("mdSleepHours").value;
+  d.weight = document.getElementById("mdWeight").value;
+
+  d.meals.breakfast.desc = document.getElementById("mdMealBreakfastDesc").value;
+  d.meals.breakfast.cal = document.getElementById("mdMealBreakfastCal").value;
+  d.meals.breakfast.protein = document.getElementById("mdMealBreakfastProtein").value;
+  d.meals.breakfast.comment = document.getElementById("mdMealBreakfastComment").value;
+
+  d.meals.lunch.desc = document.getElementById("mdMealLunchDesc").value;
+  d.meals.lunch.cal = document.getElementById("mdMealLunchCal").value;
+  d.meals.lunch.protein = document.getElementById("mdMealLunchProtein").value;
+  d.meals.lunch.comment = document.getElementById("mdMealLunchComment").value;
+
+  d.meals.dinner.desc = document.getElementById("mdMealDinnerDesc").value;
+  d.meals.dinner.cal = document.getElementById("mdMealDinnerCal").value;
+  d.meals.dinner.protein = document.getElementById("mdMealDinnerProtein").value;
+  d.meals.dinner.comment = document.getElementById("mdMealDinnerComment").value;
+
+  d.meals.snacks.desc = document.getElementById("mdMealSnacksDesc").value;
+  d.meals.snacks.cal = document.getElementById("mdMealSnacksCal").value;
+  d.meals.snacks.protein = document.getElementById("mdMealSnacksProtein").value;
+  d.meals.snacks.comment = document.getElementById("mdMealSnacksComment").value;
+
+  d.nutrition.carbs = document.getElementById("mdNutCarbs").value;
+  d.nutrition.status = document.getElementById("mdNutStatus").value;
+
+  d.thought = document.getElementById("mdThought").value;
+  d.good = document.getElementById("mdGood").value;
+  d.improve = document.getElementById("mdImprove").value;
+
+  mdRecalcNutritionTotals(d);
+  return d;
+}
+
+function onMdInput(){
+  if(mdSuppressSave) return;
+  const d = mdCollectForm();
+  mdSetDay(mdCurrentDate, d);
+  mdRenderProgress(d);
+}
+
+function mdIsFilled(v){
+  return v !== null && v !== undefined && String(v).trim() !== "";
+}
+
+function mdRenderProgress(d){
+  const checks = [
+    ["Время сна", mdIsFilled(d.sleepStart)],
+    ["Время пробуждения", mdIsFilled(d.sleepEnd)],
+    ["Часы сна", mdIsFilled(d.sleepHours)],
+    ["Качество сна", mdIsFilled(d.sleepQuality)],
+    ["Настроение", mdIsFilled(d.mood)],
+    ["Энергия", mdIsFilled(d.energy)],
+    ["Вес", mdIsFilled(d.weight)],
+    ["Вода", (d.water||0) > 0],
+    ["Завтрак (описание)", mdIsFilled(d.meals.breakfast.desc)],
+    ["Завтрак (калории)", mdIsFilled(d.meals.breakfast.cal)],
+    ["Завтрак (белок)", mdIsFilled(d.meals.breakfast.protein)],
+    ["Обед (описание)", mdIsFilled(d.meals.lunch.desc)],
+    ["Обед (калории)", mdIsFilled(d.meals.lunch.cal)],
+    ["Обед (белок)", mdIsFilled(d.meals.lunch.protein)],
+    ["Ужин (описание)", mdIsFilled(d.meals.dinner.desc)],
+    ["Ужин (калории)", mdIsFilled(d.meals.dinner.cal)],
+    ["Ужин (белок)", mdIsFilled(d.meals.dinner.protein)],
+    ["Перекусы (описание)", mdIsFilled(d.meals.snacks.desc)],
+    ["Углеводы за день", mdIsFilled(d.nutrition.carbs)],
+    ["Оценка питания", mdIsFilled(d.nutrition.rating)],
+    ["Статус питания", mdIsFilled(d.nutrition.status)],
+    ["Тренировки", Object.values(d.training).some(v=>v)],
+    ["Мысль дня", mdIsFilled(d.thought)],
+    ["Что получилось", mdIsFilled(d.good)],
+    ["Что улучшить", mdIsFilled(d.improve)]
+  ];
+  const filled = checks.filter(c=>c[1]).length;
+  const total = checks.length;
+  const pct = Math.round((filled/total)*100);
+
+  document.getElementById("mdProgressFill").style.width = pct + "%";
+  document.getElementById("mdProgressPct").textContent = pct + "%";
+
+  const missing = checks.filter(c=>!c[1]).map(c=>c[0]);
+  const box = document.getElementById("mdMissingBox");
+  box.innerHTML = missing.length
+    ? `<b>Не заполнено (${missing.length}):</b> ${missing.join(", ")}`
+    : `<b>Готово на 100% 🎉</b> Все пункты дня заполнены.`;
+}
+
+// инициализация раздела при загрузке страницы
+(function initMyDay(){
+  document.getElementById("mdDate").value = todayISO();
+  loadMdForDate(todayISO());
+})();
 </script>
 </body>
 </html>
